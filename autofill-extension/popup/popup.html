@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHOST</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <svg width="18" height="18" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="50" cy="50" rx="46" ry="46" fill="#12082a"/>
+        <!-- ghost body -->
+        <path d="M50,18 A18,18 0 0,1 68,36 L68,70 Q63,78 58,70 Q54,62 50,70 Q46,78 42,70 Q37,62 32,70 L32,36 A18,18 0 0,1 50,18 Z" fill="#d4dcff" opacity="0.92"/>
+        <!-- eyes -->
+        <ellipse cx="42" cy="46" rx="5.5" ry="5" fill="#0a0820"/>
+        <ellipse cx="40.5" cy="44.5" rx="2" ry="2" fill="#64dfff" opacity="0.9"/>
+        <ellipse cx="58" cy="46" rx="5.5" ry="5" fill="#0a0820"/>
+        <ellipse cx="56.5" cy="44.5" rx="2" ry="2" fill="#64dfff" opacity="0.9"/>
+      </svg>
+      <span>GHOST</span>
+      <span class="logo-sub">General Handler of Stored Templates</span>
+    </div>
+    <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+  </header>
+
+  <!-- Profile Bar -->
+  <div class="profile-bar">
+    <select id="profileSelect" class="profile-select"></select>
+    <button class="btn-small btn-ghost" id="addProfileBtn" title="New profile">＋</button>
+    <button class="btn-small btn-ghost btn-danger-icon" id="deleteProfileBtn" title="Delete">✕</button>
+  </div>
+
+  <!-- Fill Zone -->
+  <div class="fill-zone">
+    <button class="btn-fill" id="fillAllBtn">
+      <svg width="13" height="13" viewBox="0 0 100 100"><path d="M50,10 A16,16 0 0,1 66,26 L66,64 Q62,71 58,64 Q54,57 50,64 Q46,71 42,64 Q38,71 34,64 L34,26 A16,16 0 0,1 50,10 Z" fill="white" opacity="0.9"/><ellipse cx="43" cy="38" rx="5" ry="4.5" fill="#12082a"/><ellipse cx="57" cy="38" rx="5" ry="4.5" fill="#12082a"/></svg>
+      Haunt All
+    </button>
+    <button class="btn-fill btn-outline" id="fillSmartBtn">Smart Fill</button>
+    <button class="btn-fill btn-ghost-fill" id="previewBtn">👁 Preview</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="mainTabs">
+    <button class="tab active" data-tab="personal">Identity</button>
+    <button class="tab" data-tab="contact">Contact</button>
+    <button class="tab" data-tab="professional">Career</button>
+    <button class="tab" data-tab="credentials">Login</button>
+    <button class="tab" data-tab="custom">Custom</button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+
+    <!-- ── IDENTITY TAB ── -->
+    <div class="tab-pane active" id="tab-personal">
+      <div class="section-label">Basic</div>
+      <div class="field-grid">
+        <label>First Name<input type="text" data-field="firstName" data-section="personal" placeholder="John" /></label>
+        <label>Last Name<input type="text" data-field="lastName" data-section="personal" placeholder="Doe" /></label>
+        <label>Middle Name<input type="text" data-field="middleName" data-section="personal" placeholder="A." /></label>
+        <label>Full Name<input type="text" data-field="fullName" data-section="personal" placeholder="John A. Doe" /></label>
+        <label>Display / Nick<input type="text" data-field="displayName" data-section="personal" placeholder="johndoe" /></label>
+        <label>Date of Birth<input type="text" data-field="dob" data-section="personal" placeholder="YYYY-MM-DD" /></label>
+        <label>Age<input type="number" data-field="age" data-section="personal" placeholder="25" /></label>
+        <label>Gender<input type="text" data-field="gender" data-section="personal" placeholder="Male / Female / Other" /></label>
+      </div>
+      <div class="section-label">Identity / Gov IDs</div>
+      <div class="field-grid">
+        <label>Nationality<input type="text" data-field="nationality" data-section="personal" placeholder="Indian" /></label>
+        <label>Place of Birth<input type="text" data-field="placeOfBirth" data-section="personal" placeholder="Mumbai" /></label>
+        <label>Passport No.<input type="text" data-field="passportNo" data-section="personal" placeholder="A1234567" /></label>
+        <label>Passport Expiry<input type="text" data-field="passportExpiry" data-section="personal" placeholder="YYYY-MM-DD" /></label>
+        <label>National ID / Aadhaar<input type="text" data-field="nationalId" data-section="personal" placeholder="XXXX XXXX XXXX" /></label>
+        <label>PAN / SSN / TIN<input type="text" data-field="taxId" data-section="personal" placeholder="ABCDE1234F" /></label>
+        <label>Voter ID<input type="text" data-field="voterId" data-section="personal" placeholder="ABC1234567" /></label>
+        <label>Driving Licence<input type="text" data-field="drivingLicence" data-section="personal" placeholder="DL-1234567890" /></label>
+      </div>
+      <div class="section-label">Health</div>
+      <div class="field-grid">
+        <label>Blood Group<input type="text" data-field="bloodGroup" data-section="personal" placeholder="O+" /></label>
+        <label>Marital Status<input type="text" data-field="maritalStatus" data-section="personal" placeholder="Single" /></label>
+        <label class="full">Allergies / Medical Notes<input type="text" data-field="medicalNotes" data-section="personal" placeholder="None" /></label>
+      </div>
+      <div class="section-label">Emergency Contact</div>
+      <div class="field-grid">
+        <label>EC Name<input type="text" data-field="ecName" data-section="personal" placeholder="Jane Doe" /></label>
+        <label>EC Relation<input type="text" data-field="ecRelation" data-section="personal" placeholder="Spouse" /></label>
+        <label class="full">EC Phone<input type="tel" data-field="ecPhone" data-section="personal" placeholder="+91 98765 43210" /></label>
+      </div>
+    </div>
+
+    <!-- ── CONTACT TAB ── -->
+    <div class="tab-pane" id="tab-contact">
+      <div class="section-label">Email & Phone</div>
+      <div class="field-grid">
+        <label class="full">Primary Email<input type="email" data-field="email" data-section="contact" placeholder="john@example.com" /></label>
+        <label class="full">Alt / Work Email<input type="email" data-field="emailAlt" data-section="contact" placeholder="john@work.com" /></label>
+        <label>Phone (Primary)<input type="tel" data-field="phone" data-section="contact" placeholder="+91 98765 43210" /></label>
+        <label>Phone (Alt)<input type="tel" data-field="phoneAlt" data-section="contact" placeholder="+1 555 000 0000" /></label>
+        <label>WhatsApp<input type="tel" data-field="whatsapp" data-section="contact" placeholder="+91 98765 43210" /></label>
+        <label>Fax<input type="tel" data-field="fax" data-section="contact" placeholder="+1 555 000 0001" /></label>
+      </div>
+      <div class="section-label">Address</div>
+      <div class="field-grid">
+        <label class="full">Street / Address Line 1<input type="text" data-field="address1" data-section="contact" placeholder="123 Main St" /></label>
+        <label class="full">Apt / Suite / Address Line 2<input type="text" data-field="address2" data-section="contact" placeholder="Flat 4B" /></label>
+        <label>Landmark<input type="text" data-field="landmark" data-section="contact" placeholder="Near City Mall" /></label>
+        <label>City / Town<input type="text" data-field="city" data-section="contact" placeholder="Mumbai" /></label>
+        <label>District<input type="text" data-field="district" data-section="contact" placeholder="Andheri" /></label>
+        <label>State / Province<input type="text" data-field="state" data-section="contact" placeholder="Maharashtra" /></label>
+        <label>ZIP / Postal Code<input type="text" data-field="zip" data-section="contact" placeholder="400001" /></label>
+        <label>Country<input type="text" data-field="country" data-section="contact" placeholder="India" /></label>
+        <label>Country Code<input type="text" data-field="countryCode" data-section="contact" placeholder="IN" /></label>
+        <label>PO Box<input type="text" data-field="poBox" data-section="contact" placeholder="PO Box 1234" /></label>
+      </div>
+      <div class="section-label">Social & Web</div>
+      <div class="field-grid">
+        <label class="full">Website / Portfolio<input type="url" data-field="website" data-section="contact" placeholder="https://example.com" /></label>
+        <label>LinkedIn<input type="text" data-field="linkedin" data-section="contact" placeholder="linkedin.com/in/johndoe" /></label>
+        <label>GitHub<input type="text" data-field="github" data-section="contact" placeholder="github.com/johndoe" /></label>
+        <label>Twitter / X<input type="text" data-field="twitter" data-section="contact" placeholder="@johndoe" /></label>
+        <label>Instagram<input type="text" data-field="instagram" data-section="contact" placeholder="@johndoe" /></label>
+        <label>Skype ID<input type="text" data-field="skype" data-section="contact" placeholder="live:johndoe" /></label>
+        <label>Telegram<input type="text" data-field="telegram" data-section="contact" placeholder="@johndoe" /></label>
+        <label>Discord<input type="text" data-field="discord" data-section="contact" placeholder="johndoe#1234" /></label>
+      </div>
+    </div>
+
+    <!-- ── PROFESSIONAL TAB ── -->
+    <div class="tab-pane" id="tab-professional">
+      <div class="section-label">Current Job</div>
+      <div class="field-grid">
+        <label>Company<input type="text" data-field="company" data-section="professional" placeholder="ACME Corp" /></label>
+        <label>Job Title<input type="text" data-field="jobTitle" data-section="professional" placeholder="Security Researcher" /></label>
+        <label>Department<input type="text" data-field="department" data-section="professional" placeholder="InfoSec" /></label>
+        <label>Employee ID<input type="text" data-field="employeeId" data-section="professional" placeholder="EMP-001" /></label>
+        <label>Years of Experience<input type="number" data-field="yearsExp" data-section="professional" placeholder="5" /></label>
+        <label>Notice Period<input type="text" data-field="noticePeriod" data-section="professional" placeholder="30 days" /></label>
+        <label>Current CTC<input type="text" data-field="currentCtc" data-section="professional" placeholder="12 LPA" /></label>
+        <label>Expected CTC<input type="text" data-field="expectedCtc" data-section="professional" placeholder="18 LPA" /></label>
+        <label class="full">Skills<input type="text" data-field="skills" data-section="professional" placeholder="Python, Burp Suite, Metasploit" /></label>
+        <label class="full">Bio / About<textarea data-field="bio" data-section="professional" rows="2" placeholder="Brief professional bio..."></textarea></label>
+      </div>
+      <div class="section-label">Education</div>
+      <div class="field-grid">
+        <label>Degree<input type="text" data-field="degree" data-section="professional" placeholder="B.Tech" /></label>
+        <label>Field / Major<input type="text" data-field="major" data-section="professional" placeholder="Computer Science" /></label>
+        <label>University / Institution<input type="text" data-field="university" data-section="professional" placeholder="IIT Bombay" /></label>
+        <label>Graduation Year<input type="text" data-field="gradYear" data-section="professional" placeholder="2021" /></label>
+        <label>GPA / Percentage<input type="text" data-field="gpa" data-section="professional" placeholder="8.5 / 10" /></label>
+      </div>
+      <div class="section-label">Financial / KYC</div>
+      <div class="field-grid">
+        <label>Bank Name<input type="text" data-field="bankName" data-section="professional" placeholder="HDFC Bank" /></label>
+        <label>Account No.<input type="text" data-field="bankAccount" data-section="professional" placeholder="XXXXXXXXXX" /></label>
+        <label>IFSC / SWIFT<input type="text" data-field="ifsc" data-section="professional" placeholder="HDFC0001234" /></label>
+        <label>GSTIN<input type="text" data-field="gstin" data-section="professional" placeholder="22AAAAA0000A1Z5" /></label>
+        <label>Card Number<input type="text" data-field="cardNumber" data-section="professional" placeholder="4111 1111 1111 1111" /></label>
+        <label>Card Expiry<input type="text" data-field="cardExpiry" data-section="professional" placeholder="MM/YY" /></label>
+        <label>CVV<input type="password" data-field="cvv" data-section="professional" placeholder="•••" /></label>
+        <label>Card Holder Name<input type="text" data-field="cardHolder" data-section="professional" placeholder="JOHN DOE" /></label>
+      </div>
+    </div>
+
+    <!-- ── LOGIN TAB ── -->
+    <div class="tab-pane" id="tab-credentials">
+      <div class="section-label">Credentials</div>
+      <div class="field-grid">
+        <label class="full">Username / Handle<input type="text" data-field="username" data-section="credentials" placeholder="johndoe" /></label>
+        <label class="full password-wrap">
+          Password
+          <div class="pwd-row">
+            <input type="password" data-field="password" data-section="credentials" id="pwdInput" placeholder="••••••••" />
+            <button class="icon-btn toggle-pwd" id="togglePwd">👁</button>
+          </div>
+        </label>
+        <label class="full password-wrap">
+          Confirm Password
+          <div class="pwd-row">
+            <input type="password" data-field="passwordConfirm" data-section="credentials" placeholder="••••••••" />
+          </div>
+        </label>
+        <label>2FA / OTP<input type="text" data-field="otp" data-section="credentials" placeholder="123456" /></label>
+        <label>PIN<input type="password" data-field="pin" data-section="credentials" placeholder="••••" /></label>
+      </div>
+      <div class="section-label">Security Questions</div>
+      <div class="field-grid">
+        <label class="full">Security Answer 1<input type="text" data-field="secAnswer1" data-section="credentials" placeholder="Mother's maiden name" /></label>
+        <label class="full">Security Answer 2<input type="text" data-field="secAnswer2" data-section="credentials" placeholder="First pet's name" /></label>
+        <label class="full">Security Answer 3<input type="text" data-field="secAnswer3" data-section="credentials" placeholder="City of birth" /></label>
+      </div>
+      <div class="section-label">Recovery</div>
+      <div class="field-grid">
+        <label class="full">Recovery Email<input type="email" data-field="recoveryEmail" data-section="credentials" placeholder="backup@example.com" /></label>
+        <label class="full">Recovery Phone<input type="tel" data-field="recoveryPhone" data-section="credentials" placeholder="+91 98765 43210" /></label>
+      </div>
+      <div class="section-label">Security / CTF Payloads</div>
+      <div class="payloads-list" id="payloadsList"></div>
+      <button class="btn-small btn-primary" id="addPayload" style="margin-top:6px">+ Add Payload</button>
+    </div>
+
+    <!-- ── CUSTOM TAB ── -->
+    <div class="tab-pane" id="tab-custom">
+      <div class="custom-header">
+        <span class="muted-text">CSS selector or field name → value. Supports any site-specific field.</span>
+        <button class="btn-small btn-primary" id="addCustomField">+ Add Field</button>
+      </div>
+      <div class="custom-fields-list" id="customFieldsList"></div>
+    </div>
+
+  </div><!-- /tab-content -->
+
+  <!-- Footer -->
+  <div class="footer-actions">
+    <button class="btn-small btn-ghost" id="saveBtn">💾 Save</button>
+    <button class="btn-small btn-ghost" id="exportBtn">📤 Export</button>
+    <button class="btn-small btn-ghost" id="importBtn">📥 Import</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" />
+  </div>
+
+  <!-- Settings Overlay -->
+  <div class="settings-overlay hidden" id="settingsOverlay">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <span>Settings</span>
+        <button class="icon-btn" id="closeSettings">✕</button>
+      </div>
+      <div class="settings-body">
+        <label class="toggle-row"><span>Highlight filled fields</span><input type="checkbox" id="settingHighlight" checked /></label>
+        <label class="toggle-row"><span>Auto-save on edit</span><input type="checkbox" id="settingAutoSave" /></label>
+        <label class="toggle-row"><span>Fill hidden fields</span><input type="checkbox" id="settingFillHidden" /></label>
+        <label class="toggle-row"><span>Fill select / dropdowns</span><input type="checkbox" id="settingFillSelect" checked /></label>
+        <hr />
+        <div class="danger-zone">
+          <span class="danger-label">Danger Zone</span>
+          <button class="btn-small btn-danger-outline" id="clearAllData">Clear All Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Overlay -->
+  <div class="settings-overlay hidden" id="previewOverlay">
+    <div class="settings-panel" style="max-height:400px;overflow-y:auto;">
+      <div class="settings-header">
+        <span>Detected Fields on Page</span>
+        <button class="icon-btn" id="closePreview">✕</button>
+      </div>
+      <div id="previewBody" class="settings-body" style="font-size:11px;gap:4px;"></div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
