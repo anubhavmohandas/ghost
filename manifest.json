@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "GHOST",
+  "name": "AutoFill Pro",
   "version": "1.0.0",
-  "description": "General Handler of Stored Templates — silently fills any form with your saved profiles. Personal, credentials, custom fields & security payloads.",
+  "description": "Smart autofill for forms — personal info, credentials, custom fields, and security payloads.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -15,7 +15,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "GHOST — General Handler of Stored Templates"
+    "default_title": "AutoFill Pro"
   },
   "background": {
     "service_worker": "background/background.js",
