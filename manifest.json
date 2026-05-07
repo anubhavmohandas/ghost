@@ -40,7 +40,7 @@
     "trigger-autofill": {
       "suggested_key": {
         "default": "Alt+F",
-        "mac": "Opt+F"
+        "mac": "Option+F"
       },
       "description": "Trigger autofill on current page"
     }
