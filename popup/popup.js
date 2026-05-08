@@ -665,9 +665,41 @@ const ub64 = (s)   => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 // sessionKey: AES-GCM CryptoKey held only in memory for this popup session.
 // Sensitive fields (credentials + financial) are encrypted before chrome.storage writes
 // and decrypted after reads. Key is derived from the user's PIN via PBKDF2.
+//
+// Session persistence: after a successful PIN unlock, the raw key bytes are cached in
+// chrome.storage.session (MV3 in-memory storage — survives popup close/reopen but clears
+// on browser restart). This means PIN is only required once per browser session.
 
 let sessionKey    = null;
 let pinConfigured = false;
+
+// Cache sessionKey into chrome.storage.session so next popup open doesn't re-prompt.
+async function cacheSessionKey(key) {
+  try {
+    const raw = await crypto.subtle.exportKey('raw', key);
+    await chrome.storage.session.set({ ghostSessionKey: b64(new Uint8Array(raw)) });
+  } catch { /* storage.session unavailable (e.g. Firefox) — silent */ }
+}
+
+// Attempt to restore sessionKey from chrome.storage.session cache.
+// Returns true if successful, false if cache miss or error.
+async function tryRestoreSessionKey() {
+  try {
+    const d = await chrome.storage.session.get('ghostSessionKey');
+    if (!d.ghostSessionKey) return false;
+    sessionKey = await crypto.subtle.importKey(
+      'raw', ub64(d.ghostSessionKey), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Wipe session cache — call when PIN is removed or changed.
+async function clearSessionCache() {
+  try { await chrome.storage.session.remove('ghostSessionKey'); } catch {}
+}
 
 const SENSITIVE_PRO_KEYS = [
   'cardNumber','cvv','cardExpiry','cardHolder',
@@ -857,6 +889,7 @@ function runPinOverlay({ mode, pinData }) {
           sessionKey     = await derivePinKey(pin, keySalt);
           pinConfigured  = true;
           await store.set({ pinHash, pinSalt: b64(hashSalt), pinKeySalt: b64(keySalt) });
+          await cacheSessionKey(sessionKey); // persist across popup close/reopen
           cleanup({ ok: true });
         } else {
           // unlock
@@ -868,6 +901,7 @@ function runPinOverlay({ mode, pinData }) {
             pinInput.value = ''; pinInput.focus();
           } else {
             sessionKey = await derivePinKey(pin, ub64(pinData.pinKeySalt));
+            await cacheSessionKey(sessionKey); // persist across popup close/reopen
             cleanup({ ok: true });
           }
         }
@@ -889,13 +923,17 @@ async function initPinLock() {
   const d = await store.get(['pinHash', 'pinSalt', 'pinKeySalt']);
   pinConfigured = !!(d.pinHash && d.pinSalt && d.pinKeySalt);
 
-  if (pinConfigured) {
-    await runPinOverlay({ mode: 'unlock', pinData: d });
-  } else {
-    // First-time: offer to set a PIN (can skip)
-    const result = await runPinOverlay({ mode: 'set', pinData: null });
-    if (result.ok) updatePinSettingsUI();
-  }
+  // No PIN configured — proceed without any prompt.
+  // User can set a PIN any time via Settings → Security.
+  if (!pinConfigured) return;
+
+  // PIN is configured. Try to restore session key from cache first.
+  // If cache hit (same browser session, popup just closed/reopened) — no prompt needed.
+  const restored = await tryRestoreSessionKey();
+  if (restored) return;
+
+  // Cache miss (browser restarted) — must prompt for PIN.
+  await runPinOverlay({ mode: 'unlock', pinData: d });
 }
 
 // ── PIN management from Settings ───────────────────────────────────────────────
@@ -918,6 +956,7 @@ function updatePinSettingsUI() {
 
 $('setPinBtn').addEventListener('click', async () => {
   $('settingsOverlay').classList.add('hidden');
+  await clearSessionCache(); // clear any old cached key before setting new one
   const result = await runPinOverlay({ mode: 'set', pinData: null });
   if (result.ok) {
     await persistAll(); // re-encrypt existing profiles with new key
@@ -943,6 +982,7 @@ $('removePinBtn').addEventListener('click', async () => {
   // profiles already decrypted in memory — null the key so persistAll writes plaintext
   sessionKey    = null;
   pinConfigured = false;
+  await clearSessionCache();
   await chrome.storage.local.remove(['pinHash', 'pinSalt', 'pinKeySalt']);
   await store.set({ profiles, activeId, settings, siteBindings });
   updatePinSettingsUI();
