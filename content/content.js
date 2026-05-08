@@ -600,7 +600,7 @@ pillStyle.textContent = `
     /* Start hidden & non-interactive — showPill() makes it visible */
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.15s, border-color 0.2s;
+    transition: none;
     white-space: nowrap;
     user-select: none;
     overflow: hidden;
@@ -713,15 +713,10 @@ async function showPill(input, profileKey) {
     // Use left-anchoring so the pill never drifts to the wrong side of the screen.
     const pillLeft = Math.max(4, rect.right - pillW - 2);
 
-    // Snap position instantly (no slide), then fade in
-    pill.style.transition    = 'none';
+    // Instant position — no animation, no slide
     pill.style.top           = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
     pill.style.left          = `${pillLeft}px`;
     pill.style.right         = '';
-    pill.style.opacity       = '0';
-    // Force reflow so position is applied before transition re-enables
-    void pill.offsetWidth;
-    pill.style.transition    = '';
     pill.style.opacity       = '1';
     pill.style.pointerEvents = 'all';
     resetPillAppearance(pill);
@@ -739,8 +734,22 @@ async function showPill(input, profileKey) {
   }
 }
 
-function hidePill(delay = 300) {
+function hidePill(delay = 0) {
   clearTimeout(pillHideTimer);
+  if (delay === 0) {
+    // Instant hide — no timer, no travel
+    const pill = document.getElementById('ghost-pill');
+    if (pill) {
+      resetPillAppearance(pill);
+      pill.style.opacity       = '0';
+      pill.style.pointerEvents = 'none';
+      pill.style.left          = '';
+      pill.style.right         = '';
+      pill.style.top           = '';
+    }
+    pillTarget = null;
+    return;
+  }
   pillHideTimer = setTimeout(() => {
     const pill = document.getElementById('ghost-pill');
     if (pill) {
@@ -749,6 +758,7 @@ function hidePill(delay = 300) {
       pill.style.pointerEvents = 'none';
       pill.style.left          = '';
       pill.style.right         = '';
+      pill.style.top           = '';
     }
     pillTarget = null;
   }, delay);
@@ -792,7 +802,7 @@ function attachHoverListeners() {
       if (!isVisible(input, false)) return;
       showPill(input, mappedKey).catch(() => {}); // never let this surface as unhandled rejection
     });
-    input.addEventListener('mouseleave', () => hidePill(350));
+    input.addEventListener('mouseleave', () => hidePill(0));
   });
 }
 
