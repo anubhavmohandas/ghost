@@ -724,20 +724,21 @@ function attachHoverListeners() {
   });
 }
 
-// Pill mouseenter → apply data-aware state
+// Pill mouseenter → apply data-aware state (once only — ignore child re-triggers)
 document.addEventListener('mouseover', (e) => {
   const pill = document.getElementById('ghost-pill');
   if (!pill || !e.target.closest('#ghost-pill')) return;
   clearTimeout(pillHideTimer);
 
+  // Already in a hover state — mouse just moved between inner elements, do nothing
+  if (pill.classList.contains('pill-sweep') || pill.classList.contains('pill-sad')) return;
+
   const hasData = pill.dataset.hasData === '1';
   if (hasData) {
-    pill.classList.remove('pill-sad');
     pill.classList.add('pill-sweep');
     const msg = PILL_HAS_DATA_MSGS[Math.floor(Math.random() * PILL_HAS_DATA_MSGS.length)];
     pill.querySelector('.pill-text').textContent = msg;
   } else {
-    pill.classList.remove('pill-sweep');
     pill.classList.add('pill-sad');
     pill.querySelector('.pill-ghost').textContent = '🥹';
     pill.querySelector('.pill-text').textContent  = 'tune data diya hi nai';
