@@ -666,16 +666,27 @@ async function getProfile() {
 }
 
 async function showPill(input, profileKey) {
+  const rect = input.getBoundingClientRect();
+
+  // Skip if field is not actually visible within the viewport
+  if (
+    rect.width  <= 0 || rect.height <= 0 ||
+    rect.right  <= 10 || rect.bottom <= 0 ||
+    rect.top    >= window.innerHeight ||
+    rect.left   >= window.innerWidth
+  ) return;
+
   const pill = getPill();
   pillTarget = { input, profileKey };
 
-  const rect  = input.getBoundingClientRect();
-  const pillH = 26;
-  // Anchor RIGHT edge of pill to field's right edge — expands leftward, never off-screen
-  pill.style.top          = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
-  pill.style.left         = '';
-  pill.style.right        = `${Math.max(4, window.innerWidth - rect.right + 6)}px`;
-  pill.style.opacity      = '1';
+  const pillH      = 26;
+  const rightOffset = Math.max(4, window.innerWidth - rect.right + 6);
+
+  // Anchor RIGHT edge of pill to field's right edge — expands leftward, stays in viewport
+  pill.style.top           = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
+  pill.style.left          = '';
+  pill.style.right         = `${rightOffset}px`;
+  pill.style.opacity       = '1';
   pill.style.pointerEvents = 'all';
   resetPillAppearance(pill);
   clearTimeout(pillHideTimer);
