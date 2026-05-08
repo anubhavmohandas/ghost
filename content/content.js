@@ -5,6 +5,15 @@
  */
 'use strict';
 
+// ── Double-injection guard ─────────────────────────────────────────────────────
+// background.js re-injects this script on keyboard shortcut if content script
+// wasn't already present. Guard prevents duplicate pill elements + listeners.
+if (window.__ghostInjected) {
+  // Already running — just respond to fill requests, don't re-init
+  throw new Error('GHOST: already injected, skipping re-init');
+}
+window.__ghostInjected = true;
+
 // ── FIELD_MAP ─────────────────────────────────────────────────────────────────
 // Each entry: { patterns[], autocomplete?, type?, selectValues? }
 // patterns = regex strings matched against: name, id, autocomplete, placeholder, aria-label, label text
@@ -591,7 +600,7 @@ pillStyle.textContent = `
     /* Start hidden & non-interactive — showPill() makes it visible */
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.15s, transform 0.12s, border-color 0.2s;
+    transition: opacity 0.15s, border-color 0.2s;
     white-space: nowrap;
     user-select: none;
     overflow: hidden;
@@ -681,11 +690,14 @@ async function showPill(input, profileKey) {
     // Strict visibility guard — pill (max 160px) needs at least 300px of right-edge clearance
     // from the left side of the viewport to render without bleeding off-screen.
     // Also reject fields that are partially off-screen on any edge.
+    // Only show pill when field's right edge is in the right half of the viewport.
+    // This filters narrow left-side fields (LinkedIn, Portfolio etc.) where the pill
+    // would overlap the field content. Also reject off-screen / zero-size fields.
     if (
       rect.width  <= 0 || rect.height <= 0 ||
-      rect.right  < 300 ||                    // too close to left edge → pill would bleed off-screen
-      rect.left   < 0  ||                     // field itself is partially off-screen left
-      rect.top    < 0  ||                     // field is above viewport
+      rect.right  < Math.max(300, window.innerWidth * 0.35) ||
+      rect.left   < 0  ||
+      rect.top    < 0  ||
       rect.bottom <= 0 ||
       rect.top    >= window.innerHeight ||
       rect.left   >= window.innerWidth
@@ -701,9 +713,15 @@ async function showPill(input, profileKey) {
     // Use left-anchoring so the pill never drifts to the wrong side of the screen.
     const pillLeft = Math.max(4, rect.right - pillW - 2);
 
+    // Snap position instantly (no slide), then fade in
+    pill.style.transition    = 'none';
     pill.style.top           = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
     pill.style.left          = `${pillLeft}px`;
     pill.style.right         = '';
+    pill.style.opacity       = '0';
+    // Force reflow so position is applied before transition re-enables
+    void pill.offsetWidth;
+    pill.style.transition    = '';
     pill.style.opacity       = '1';
     pill.style.pointerEvents = 'all';
     resetPillAppearance(pill);
@@ -737,14 +755,25 @@ function hidePill(delay = 300) {
 }
 
 // Attach hover listeners to all recognizable inputs (respects pillEnabled setting)
-let _pillEnabled = true; // local cache; updated from storage on attach
+let _pillEnabled = false; // live-updated via storage.onChanged
+
+// Read initial value once
+try {
+  chrome.storage.local.get(['pillEnabled'], (d) => {
+    if (!chrome.runtime.lastError) _pillEnabled = d.pillEnabled === true;
+  });
+} catch { /* context invalidated */ }
+
+// Keep in sync when user toggles in Settings — no page refresh needed
+try {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && 'pillEnabled' in changes) {
+      _pillEnabled = changes.pillEnabled.newValue === true;
+    }
+  });
+} catch { /* context invalidated */ }
+
 function attachHoverListeners() {
-  try {
-    chrome.storage.local.get(['pillEnabled'], (d) => {
-      if (chrome.runtime.lastError) return;
-      _pillEnabled = d.pillEnabled !== false; // default true
-    });
-  } catch { /* context invalidated */ }
 
   const selector = 'input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea';
 
@@ -830,3 +859,17 @@ attachHoverListeners();
 new MutationObserver(() => attachHoverListeners()).observe(document.body, {
   childList: true, subtree: true,
 });
+
+// ── Hide pill on scroll/resize ──────────────────────────────────────────────
+['scroll', 'resize'].forEach(evt =>
+  window.addEventListener(evt, () => {
+    const pill = document.getElementById('ghost-pill');
+    if (pill) {
+      pill.style.transition    = 'none';
+      pill.style.opacity       = '0';
+      pill.style.pointerEvents = 'none';
+    }
+    pillTarget = null;
+    clearTimeout(pillHideTimer);
+  }, { passive: true, capture: true })
+);

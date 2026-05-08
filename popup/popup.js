@@ -958,7 +958,7 @@ async function applySettings() {
   settingFillSelect.checked = settings.fillSelect;
   // pill toggle — stored separately so content script can read it independently
   const pd = await store.get(['pillEnabled']);
-  settingPill.checked = pd.pillEnabled !== false; // default true
+  settingPill.checked = pd.pillEnabled === true; // default false — user must opt in
 }
 $('settingsBtn').addEventListener('click', () => $('settingsOverlay').classList.remove('hidden'));
 $('closeSettings').addEventListener('click', () => $('settingsOverlay').classList.add('hidden'));
