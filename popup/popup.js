@@ -1149,7 +1149,7 @@ function nextDictationField() {
       dictIndex++;
       setTimeout(() => { if (dictating) nextDictationField(); }, 600);
     } else if (e.error === 'not-allowed') {
-      stopDictation('Mic blocked — allow microphone in browser settings then retry');
+      stopDictation('Mic blocked — go to chrome://settings/content/microphone → allow your extension');
     } else {
       stopDictation(`Error: ${e.error}`);
     }
@@ -1158,7 +1158,7 @@ function nextDictationField() {
   recognition.start();
 }
 
-dictateBtn.addEventListener('click', async () => {
+dictateBtn.addEventListener('click', () => {
   if (dictating) {
     stopDictation('Dictation cancelled');
     return;
@@ -1166,18 +1166,6 @@ dictateBtn.addEventListener('click', async () => {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     showToast('Speech API not supported here', 'error');
-    return;
-  }
-  // Request mic permission explicitly — Chrome extensions require this before SpeechRecognition works
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(t => t.stop()); // release immediately, we only needed the permission grant
-  } catch (err) {
-    const msg = err.name === 'NotAllowedError'
-      ? 'Mic blocked — click the 🎤 icon in your address bar to allow microphone'
-      : `Mic error: ${err.message}`;
-    showToast(msg, 'error');
-    dictateStatus.textContent = msg;
     return;
   }
   dictating  = true;
