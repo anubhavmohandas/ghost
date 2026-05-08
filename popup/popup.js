@@ -1062,73 +1062,46 @@ document.addEventListener('change', (e) => {
   }
 });
 
-// ── Dictation Mode ────────────────────────────────────────────────────────────
-
-// Fields to cycle through during dictation (label + data-field key)
-const DICTATION_FIELDS = [
-  { label: 'First Name',    section: 'personal',     key: 'firstName' },
-  { label: 'Last Name',     section: 'personal',     key: 'lastName' },
-  { label: 'Email',         section: 'contact',      key: 'email' },
-  { label: 'Phone',         section: 'contact',      key: 'phone' },
-  { label: 'Date of Birth', section: 'personal',     key: 'dob' },
-  { label: 'City',          section: 'contact',      key: 'city' },
-  { label: 'State',         section: 'contact',      key: 'state' },
-  { label: 'Country',       section: 'contact',      key: 'country' },
-  { label: 'Company',       section: 'professional', key: 'company' },
-  { label: 'Job Title',     section: 'professional', key: 'jobTitle' },
-  { label: 'Username',      section: 'credentials',  key: 'username' },
-];
-
-let dictating    = false;
-let dictIndex    = 0;
-let recognition  = null;
+// ── Dictation Mode — opens a dedicated tab (extension popups can't get mic permission) ──
 
 const dictateBtn    = $('dictateBtn');
 const dictateStatus = $('dictateStatus');
 const dictateSkip   = $('dictateSkip');
 
-function stopDictation(msg = 'Dictation stopped') {
-  dictating = false;
-  if (recognition) { try { recognition.stop(); } catch {} recognition = null; }
-  dictateBtn.textContent = '🎤 Dictate';
-  dictateBtn.className   = 'btn-dictate';
-  dictateStatus.textContent = msg;
-  dictateSkip.style.display = 'none';
-}
+if (dictateSkip) dictateSkip.style.display = 'none'; // not used in tab-based flow
 
-function nextDictationField() {
-  if (dictIndex >= DICTATION_FIELDS.length) {
-    saveCurrentProfile();
-    stopDictation('All done — profile saved ✓');
-    dictateBtn.classList.add('done');
-    return;
+dictateBtn.addEventListener('click', async () => {
+  // Open the dictation page as a real tab — Chrome will show mic permission prompt there
+  dictateBtn.disabled = true;
+  dictateStatus.textContent = '🎤 Opening dictation tab…';
+  try {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('popup/dictation.html') });
+    dictateStatus.textContent = 'Dictation running in new tab — come back when done';
+  } catch {
+    dictateStatus.textContent = 'Could not open dictation tab';
   }
+  dictateBtn.disabled = false;
+});
 
-  const field = DICTATION_FIELDS[dictIndex];
-  dictateStatus.textContent = `🎤 Say your ${field.label}...`;
+// Listen for results written by the dictation tab
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.dictationResult) return;
+  const { results } = changes.dictationResult.newValue || {};
+  if (!results) return;
 
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    stopDictation('Speech recognition not supported in this browser');
-    return;
-  }
+  const p = profiles[activeId];
+  if (!p) return;
 
-  recognition = new SR();
-  recognition.lang = 'en-IN'; // Indian English — handles accents better
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
+  // Apply each dictated value to the active profile
+  for (const [key, { section, value }] of Object.entries(results)) {
+    if (p[section]) {
+      p[section][key] = value;
+      const el = document.querySelector(`[data-field="${key}"][data-section="${section}"]`);
+      if (el) el.value = value;
 
-  recognition.onresult = (e) => {
-    const val = e.results[0][0].transcript.trim();
-    const p = profiles[activeId];
-    if (p?.[field.section]) {
-      p[field.section][field.key] = val;
-      // update UI input
-      const el = document.querySelector(`[data-field="${field.key}"][data-section="${field.section}"]`);
-      if (el) el.value = val;
-      // auto age if DOB was dictated
-      if (field.key === 'dob') {
-        const parsed = new Date(val);
+      // Auto-age calc if DOB dictated
+      if (key === 'dob') {
+        const parsed = new Date(value);
         if (!isNaN(parsed)) {
           const iso = parsed.toISOString().split('T')[0];
           if (el) el.value = iso;
@@ -1138,49 +1111,14 @@ function nextDictationField() {
         }
       }
     }
-    dictateStatus.textContent = `✓ ${field.label}: "${val}"`;
-    dictIndex++;
-    setTimeout(() => { if (dictating) nextDictationField(); }, 800);
-  };
-
-  recognition.onerror = (e) => {
-    if (e.error === 'no-speech') {
-      dictateStatus.textContent = `No speech detected — skipping ${field.label}`;
-      dictIndex++;
-      setTimeout(() => { if (dictating) nextDictationField(); }, 600);
-    } else if (e.error === 'not-allowed') {
-      stopDictation('Mic blocked — go to chrome://settings/content/microphone → allow your extension');
-    } else {
-      stopDictation(`Error: ${e.error}`);
-    }
-  };
-
-  recognition.start();
-}
-
-dictateBtn.addEventListener('click', () => {
-  if (dictating) {
-    stopDictation('Dictation cancelled');
-    return;
   }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    showToast('Speech API not supported here', 'error');
-    return;
-  }
-  dictating  = true;
-  dictIndex  = 0;
-  dictateBtn.textContent = '⏹ Stop';
-  dictateBtn.className   = 'btn-dictate listening';
-  dictateSkip.style.display = 'inline-block';
-  nextDictationField();
-});
 
-dictateSkip.addEventListener('click', () => {
-  if (!dictating) return;
-  try { if (recognition) recognition.stop(); } catch {}
-  dictIndex++;
-  setTimeout(() => { if (dictating) nextDictationField(); }, 200);
+  saveCurrentProfile();
+  dictateStatus.textContent = '✓ Dictation applied — profile saved';
+  showToast('Dictation results applied ✓', 'success');
+
+  // Clear the result key so it doesn't re-apply on next popup open
+  chrome.storage.local.remove('dictationResult');
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
