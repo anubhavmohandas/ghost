@@ -139,6 +139,7 @@ const settingHighlight  = $('settingHighlight');
 const settingAutoSave   = $('settingAutoSave');
 const settingFillHidden = $('settingFillHidden');
 const settingFillSelect = $('settingFillSelect');
+const settingPill       = $('settingPill');
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -146,7 +147,7 @@ async function init() {
   settings     = { ...settings, ...(d.settings || {}) };
   siteBindings = d.siteBindings || {};
   await loadTheme();
-  applySettings();
+  await applySettings();
 
   if (d.profiles && Object.keys(d.profiles).length) {
     profiles = d.profiles;
@@ -630,11 +631,14 @@ const b64  = (buf) => btoa(String.fromCharCode(...buf));
 const ub64 = (s)   => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-function applySettings() {
+async function applySettings() {
   settingHighlight.checked  = settings.highlight;
   settingAutoSave.checked   = settings.autoSave;
   settingFillHidden.checked = settings.fillHidden;
   settingFillSelect.checked = settings.fillSelect;
+  // pill toggle — stored separately so content script can read it independently
+  const pd = await store.get(['pillEnabled']);
+  settingPill.checked = pd.pillEnabled !== false; // default true
 }
 $('settingsBtn').addEventListener('click', () => $('settingsOverlay').classList.remove('hidden'));
 $('closeSettings').addEventListener('click', () => $('settingsOverlay').classList.add('hidden'));
@@ -646,6 +650,9 @@ $('closeSettings').addEventListener('click', () => $('settingsOverlay').classLis
     settings.fillSelect = settingFillSelect.checked;
     await store.set({ settings });
   });
+});
+settingPill.addEventListener('change', async () => {
+  await store.set({ pillEnabled: settingPill.checked });
 });
 $('clearAllData').addEventListener('click', async () => {
   if (!confirm('Clear ALL data?')) return;
@@ -817,6 +824,8 @@ function nextDictationField() {
       dictateStatus.textContent = `No speech detected — skipping ${field.label}`;
       dictIndex++;
       setTimeout(() => { if (dictating) nextDictationField(); }, 600);
+    } else if (e.error === 'not-allowed') {
+      stopDictation('Mic blocked — allow microphone in browser settings then retry');
     } else {
       stopDictation(`Error: ${e.error}`);
     }
@@ -825,7 +834,7 @@ function nextDictationField() {
   recognition.start();
 }
 
-dictateBtn.addEventListener('click', () => {
+dictateBtn.addEventListener('click', async () => {
   if (dictating) {
     stopDictation('Dictation cancelled');
     return;
@@ -833,6 +842,18 @@ dictateBtn.addEventListener('click', () => {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     showToast('Speech API not supported here', 'error');
+    return;
+  }
+  // Request mic permission explicitly — Chrome extensions require this before SpeechRecognition works
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop()); // release immediately, we only needed the permission grant
+  } catch (err) {
+    const msg = err.name === 'NotAllowedError'
+      ? 'Mic blocked — click the 🎤 icon in your address bar to allow microphone'
+      : `Mic error: ${err.message}`;
+    showToast(msg, 'error');
+    dictateStatus.textContent = msg;
     return;
   }
   dictating  = true;

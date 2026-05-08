@@ -240,6 +240,36 @@
     <input type="file" id="importFile" accept=".json" style="display:none" />
   </div>
 
+  <!-- ═══ PIN Lock Overlay ═══ -->
+  <div id="pinOverlay" class="pin-overlay hidden">
+    <div class="pin-panel">
+      <div class="pin-ghost">👻</div>
+      <div class="pin-title" id="pinTitle">Unlock GHOST</div>
+      <div class="pin-subtitle" id="pinSubtitle">Enter your PIN to access your profiles</div>
+      <input type="password" id="pinInput" class="pin-input" placeholder="PIN" maxlength="64" autocomplete="off" />
+      <input type="password" id="pinConfirmInput" class="pin-input hidden" placeholder="Confirm PIN" maxlength="64" autocomplete="off" />
+      <div id="pinError" class="pin-error hidden"></div>
+      <button id="pinSubmitBtn" class="btn-fill pin-submit">Unlock</button>
+      <button id="pinSkipBtn" class="pin-skip-btn hidden">Skip — set up PIN later in Settings</button>
+    </div>
+  </div>
+
+  <!-- ═══ Passphrase Modal (replaces browser prompt) ═══ -->
+  <div id="passphraseModal" class="pin-overlay hidden">
+    <div class="pin-panel">
+      <div class="pin-title" id="ppTitle">Passphrase</div>
+      <div class="pin-subtitle" id="ppSubtitle"></div>
+      <div class="pp-input-wrap">
+        <input type="password" id="ppInput" class="pin-input" placeholder="Passphrase" maxlength="128" autocomplete="new-password" />
+        <button id="ppToggleBtn" class="icon-btn pp-toggle" title="Show/hide">👁</button>
+      </div>
+      <div class="pp-actions">
+        <button id="ppConfirmBtn" class="btn-fill">Confirm</button>
+        <button id="ppCancelBtn" class="btn-small btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Overlay -->
   <div class="settings-overlay hidden" id="settingsOverlay">
     <div class="settings-panel">
@@ -252,6 +282,14 @@
         <label class="toggle-row"><span>Auto-save on edit</span><input type="checkbox" id="settingAutoSave" /></label>
         <label class="toggle-row"><span>Fill hidden fields</span><input type="checkbox" id="settingFillHidden" /></label>
         <label class="toggle-row"><span>Fill select / dropdowns</span><input type="checkbox" id="settingFillSelect" checked /></label>
+        <label class="toggle-row"><span>👻 Hover pill (May I?)</span><input type="checkbox" id="settingPill" checked /></label>
+        <hr />
+        <div class="pin-settings-row">
+          <span>🔐 PIN Protection</span>
+          <span class="pin-status-label" id="pinStatusLabel">Not set</span>
+          <button class="btn-small btn-ghost" id="setPinBtn">Set PIN</button>
+          <button class="btn-small btn-danger-outline hidden" id="removePinBtn">Remove</button>
+        </div>
         <hr />
         <div class="danger-zone">
           <span class="danger-label">Danger Zone</span>

@@ -542,10 +542,12 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
 // ── Cmd+Shift+F / Ctrl+Shift+F shortcut ──────────────────────────────────────
 document.addEventListener('keydown', (e) => {
   const isMac = navigator.platform.toUpperCase().includes('MAC');
+  // e.key varies by platform/shift state — normalise to lowercase
   const trigger = isMac
-    ? (e.metaKey && e.shiftKey && e.key === 'f')
-    : (e.ctrlKey && e.shiftKey && e.key === 'F');
-  if (trigger) chrome.runtime.sendMessage({ type: 'SHORTCUT_FILL' });
+    ? (e.metaKey && e.shiftKey && e.key.toLowerCase() === 'f')
+    : (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f');
+  if (!trigger) return;
+  try { chrome.runtime.sendMessage({ type: 'SHORTCUT_FILL' }); } catch { /* context invalidated */ }
 });
 
 // ── Hover Pill ────────────────────────────────────────────────────────────────
@@ -676,11 +678,15 @@ async function showPill(input, profileKey) {
   try {
     const rect = input.getBoundingClientRect();
 
-    // Skip if field is off-screen or too close to the left edge
-    // rect.right < 180 → pill (max 160px) would overflow off the left side of the viewport
+    // Strict visibility guard — pill (max 160px) needs at least 300px of right-edge clearance
+    // from the left side of the viewport to render without bleeding off-screen.
+    // Also reject fields that are partially off-screen on any edge.
     if (
       rect.width  <= 0 || rect.height <= 0 ||
-      rect.right  < 180 || rect.bottom <= 0 ||
+      rect.right  < 300 ||                    // too close to left edge → pill would bleed off-screen
+      rect.left   < 0  ||                     // field itself is partially off-screen left
+      rect.top    < 0  ||                     // field is above viewport
+      rect.bottom <= 0 ||
       rect.top    >= window.innerHeight ||
       rect.left   >= window.innerWidth
     ) return;
@@ -726,8 +732,16 @@ function hidePill(delay = 300) {
   }, delay);
 }
 
-// Attach hover listeners to all recognizable inputs
+// Attach hover listeners to all recognizable inputs (respects pillEnabled setting)
+let _pillEnabled = true; // local cache; updated from storage on attach
 function attachHoverListeners() {
+  try {
+    chrome.storage.local.get(['pillEnabled'], (d) => {
+      if (chrome.runtime.lastError) return;
+      _pillEnabled = d.pillEnabled !== false; // default true
+    });
+  } catch { /* context invalidated */ }
+
   const selector = 'input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea';
 
   document.querySelectorAll(selector).forEach((input) => {
@@ -741,6 +755,7 @@ function attachHoverListeners() {
     if (!mappedKey) return;
 
     input.addEventListener('mouseenter', () => {
+      if (!_pillEnabled) return;
       if (!isVisible(input, false)) return;
       showPill(input, mappedKey).catch(() => {}); // never let this surface as unhandled rejection
     });
