@@ -3,7 +3,7 @@
 
 > A browser extension that silently fills any form with your saved profiles — personal info, credentials, custom fields, and security payloads.
 
-![Version](https://img.shields.io/badge/version-5.0.0-7c3aed?style=flat-square)
+![Version](https://img.shields.io/badge/version-5.1.0-7c3aed?style=flat-square)
 ![Manifest](https://img.shields.io/badge/manifest-v3-22d3ee?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)
 ![Browsers](https://img.shields.io/badge/browsers-Chrome%20%7C%20Firefox%20%7C%20Edge%20%7C%20Brave-d4d0ff?style=flat-square)
@@ -173,6 +173,7 @@ PRs welcome. If you find a site where GHOST doesn't detect a field correctly, op
 
 | Version | Date | What changed |
 |---------|------|--------------|
+| **5.1** | 2026-05-08 | Smart hover pill states — gradient sweep + sarcastic message when field has data; sad ghost + "tune data diya hi nai 🥹" when field is empty. Click on no-data pill is now a no-op. 5-second profile cache for instant hover response. |
 | **5.0** | 2026-05-08 | Full theme system — Purple Amber default, 4 presets (Teal×Coral, Synthwave Dream, Synth Dusk), custom builder with 10 live color pickers, save/load per profile. Google Drive reminder nudge after export. Popup script renamed v3. |
 | **3.0** | 2026-04 | Per-site profile binding. Field hover pill (👻 May I?). Dark/light theme toggle. Firefox MV2 manifest. Chrome Web Store assets. |
 | **2.0** | 2026-04 | Rebrand to GHOST. Deep Teal + Coral palette. DOB calendar picker with auto-age calculation. Dictation mode (Web Speech API, en-IN). Mac keyboard shortcut fix (Cmd+Shift+F). |

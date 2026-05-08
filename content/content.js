@@ -1,6 +1,7 @@
 /**
- * AutoFill Pro — Content Script v2
+ * GHOST — Content Script v5.1
  * Smart field detection across 80+ real-world form field patterns.
+ * Hover pill: gradient sweep when data exists, sad state when it doesn't.
  */
 'use strict';
 
@@ -548,13 +549,24 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── Hover Pill ────────────────────────────────────────────────────────────────
-// A tiny "👻 May I?" pill appears at the right edge of any detectable field.
-// Clicking it fills just that one field from the saved profile.
+// "👻 May I?" pill at right edge of any detectable field.
+// Hovering the pill shows a data-aware state before clicking.
+// Has data  → gradient sweeps in, sarcastic "Done bro Done 🕺" vibe
+// No data   → sad ghost, "tune mujhe data diya hi nai 🥹"
 
-let ghostPill    = null;
-let pillTarget   = null;
-let pillHideTimer = null;
-let cachedProfile = null;
+const PILL_HAS_DATA_MSGS = [
+  'Done bro done 🕺',
+  'tera kaam mera kaam 💅',
+  'haan haan, karunga 😤',
+  'bata de bas, bhar dunga 👻',
+  'ek second bhai 🫡',
+];
+
+let ghostPill      = null;
+let pillTarget     = null;
+let pillHideTimer  = null;
+let cachedProfile  = null;
+let profileLoadTs  = 0;
 
 // Inject pill styles once
 const pillStyle = document.createElement('style');
@@ -565,27 +577,57 @@ pillStyle.textContent = `
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 8px 3px 5px;
-    background: #0d2b27;
-    border: 1px solid #ff6b6b;
+    padding: 3px 9px 3px 6px;
+    background: #0d0221;
+    border: 1.5px solid #7c3aed;
     border-radius: 20px;
     font-size: 11px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: #e0f2f0;
+    color: #c4b5fd;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    box-shadow: 0 2px 10px rgba(124,58,237,0.3);
     pointer-events: all;
-    transition: opacity 0.15s, transform 0.15s;
+    transition: opacity 0.15s, transform 0.12s, border-color 0.2s;
     white-space: nowrap;
     user-select: none;
+    overflow: hidden;
+    background-size: 200% 100%;
+    background-position: 100% 0;
   }
-  #ghost-pill:hover {
-    background: #ff6b6b;
-    color: #fff;
-    transform: scale(1.05);
-  }
-  #ghost-pill .pill-ghost { font-size: 12px; line-height: 1; }
+  #ghost-pill .pill-ghost { font-size: 13px; line-height: 1; transition: transform 0.2s; }
   #ghost-pill .pill-text  { font-weight: 600; letter-spacing: 0.02em; }
+
+  /* ── State: data exists, pill hovered ── */
+  #ghost-pill.pill-sweep {
+    background-image: linear-gradient(90deg, #7c3aed 0%, #f72585 55%, #FAAE7B 100%) !important;
+    background-size: 200% 100% !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    transform: scale(1.06);
+    animation: ghostSweep 0.45s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  #ghost-pill.pill-sweep .pill-ghost { transform: rotate(-10deg) scale(1.1); }
+  @keyframes ghostSweep {
+    from { background-position: 100% 0; }
+    to   { background-position: 0% 0; }
+  }
+
+  /* ── State: no data, pill hovered ── */
+  #ghost-pill.pill-sad {
+    background: #1a0a2e !important;
+    border-color: #3d1a60 !important;
+    color: #6b4fa0 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    animation: ghostShake 0.35s ease;
+  }
+  @keyframes ghostShake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-3px); }
+    40%      { transform: translateX(3px); }
+    60%      { transform: translateX(-2px); }
+    80%      { transform: translateX(2px); }
+  }
 `;
 document.head.appendChild(pillStyle);
 
@@ -604,44 +646,60 @@ function getPill() {
   return ghostPill;
 }
 
-function showPill(input, profileKey) {
+function resetPillAppearance(pill) {
+  pill.classList.remove('pill-sweep', 'pill-sad');
+  pill.querySelector('.pill-ghost').textContent = '👻';
+  pill.querySelector('.pill-text').textContent  = 'May I?';
+}
+
+// Load profile with 5-second in-memory cache
+async function getProfile() {
+  if (cachedProfile && (Date.now() - profileLoadTs) < 5000) return cachedProfile;
+  return new Promise((res) => {
+    chrome.storage.local.get(['profiles', 'activeId'], (d) => {
+      cachedProfile = d.profiles?.[d.activeId] || null;
+      profileLoadTs = Date.now();
+      res(cachedProfile);
+    });
+  });
+}
+
+async function showPill(input, profileKey) {
   const pill = getPill();
   pillTarget = { input, profileKey };
 
-  const rect = input.getBoundingClientRect();
-  // Position: vertically centered on field, just inside the right edge
-  const pillH = 24;
-  const top  = rect.top + (rect.height - pillH) / 2;
-  const left = rect.right - 80; // 80px from right edge of field
-
-  pill.style.top  = `${Math.max(4, top)}px`;
-  pill.style.left = `${Math.max(4, left)}px`;
-  pill.style.opacity = '1';
+  const rect  = input.getBoundingClientRect();
+  const pillH = 26;
+  pill.style.top          = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
+  pill.style.left         = `${Math.max(4, rect.right - 88)}px`;
+  pill.style.opacity      = '1';
   pill.style.pointerEvents = 'all';
-
+  resetPillAppearance(pill);
   clearTimeout(pillHideTimer);
+
+  // Pre-fetch profile so hover response is instant
+  const profile = await getProfile();
+  const hasData = !!(profile && getProfileValue(profile, profileKey));
+  // Only update dataset if pill is still on this field
+  if (pillTarget?.profileKey === profileKey) {
+    pill.dataset.hasData = hasData ? '1' : '0';
+  }
 }
 
 function hidePill(delay = 300) {
   clearTimeout(pillHideTimer);
   pillHideTimer = setTimeout(() => {
     const pill = document.getElementById('ghost-pill');
-    if (pill) { pill.style.opacity = '0'; pill.style.pointerEvents = 'none'; }
+    if (pill) {
+      resetPillAppearance(pill);
+      pill.style.opacity      = '0';
+      pill.style.pointerEvents = 'none';
+    }
     pillTarget = null;
   }, delay);
 }
 
-// Load profile from storage for single-field fill
-async function getProfile() {
-  return new Promise((res) => {
-    chrome.storage.local.get(['profiles','activeId'], (d) => {
-      const id = d.activeId;
-      res(d.profiles?.[id] || null);
-    });
-  });
-}
-
-// Attach hover listeners — scan once on load, re-scan on DOM changes
+// Attach hover listeners to all recognizable inputs
 function attachHoverListeners() {
   const selector = 'input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea';
 
@@ -649,26 +707,56 @@ function attachHoverListeners() {
     if (input.__ghostHover) return;
     input.__ghostHover = true;
 
-    // Detect which profile key this input maps to
     let mappedKey = null;
     for (const [key, sig] of Object.entries(FIELD_MAP)) {
       if (matchesSignature(input, sig)) { mappedKey = key; break; }
     }
-    if (!mappedKey) return; // not a recognizable field — no pill
+    if (!mappedKey) return;
 
     input.addEventListener('mouseenter', () => {
       if (!isVisible(input, false)) return;
       showPill(input, mappedKey);
     });
-
     input.addEventListener('mouseleave', () => hidePill(350));
   });
 }
 
-// Pill click → fill that one field
+// Pill mouseenter → apply data-aware state
+document.addEventListener('mouseover', (e) => {
+  const pill = document.getElementById('ghost-pill');
+  if (!pill || !e.target.closest('#ghost-pill')) return;
+  clearTimeout(pillHideTimer);
+
+  const hasData = pill.dataset.hasData === '1';
+  if (hasData) {
+    pill.classList.remove('pill-sad');
+    pill.classList.add('pill-sweep');
+    const msg = PILL_HAS_DATA_MSGS[Math.floor(Math.random() * PILL_HAS_DATA_MSGS.length)];
+    pill.querySelector('.pill-text').textContent = msg;
+  } else {
+    pill.classList.remove('pill-sweep');
+    pill.classList.add('pill-sad');
+    pill.querySelector('.pill-ghost').textContent = '🥹';
+    pill.querySelector('.pill-text').textContent  = 'tune data diya hi nai';
+  }
+});
+
+// Pill mouseleave → reset
+document.addEventListener('mouseout', (e) => {
+  const pill = document.getElementById('ghost-pill');
+  if (!pill || !e.target.closest('#ghost-pill')) return;
+  resetPillAppearance(pill);
+  hidePill(300);
+});
+
+// Pill click → fill field (only if data exists)
 document.addEventListener('click', async (e) => {
   if (!e.target.closest('#ghost-pill')) return;
   if (!pillTarget) return;
+
+  const pill    = document.getElementById('ghost-pill');
+  const hasData = pill?.dataset.hasData === '1';
+  if (!hasData) return; // no data — do nothing on click
 
   hidePill(0);
   const profile = await getProfile();
@@ -680,14 +768,6 @@ document.addEventListener('click', async (e) => {
 
   nativeSet(input, val);
   highlight(input);
-});
-
-// Pill hover — keep it visible while mouse is on it
-document.addEventListener('mouseover', (e) => {
-  if (e.target.closest('#ghost-pill')) clearTimeout(pillHideTimer);
-});
-document.addEventListener('mouseout', (e) => {
-  if (e.target.closest('#ghost-pill')) hidePill(300);
 });
 
 // Initial scan + MutationObserver for dynamic forms
