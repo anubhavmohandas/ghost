@@ -586,7 +586,9 @@ pillStyle.textContent = `
     color: #c4b5fd;
     cursor: pointer;
     box-shadow: 0 2px 10px rgba(124,58,237,0.3);
-    pointer-events: all;
+    /* Start hidden & non-interactive — showPill() makes it visible */
+    opacity: 0;
+    pointer-events: none;
     transition: opacity 0.15s, transform 0.12s, border-color 0.2s;
     white-space: nowrap;
     user-select: none;
@@ -653,50 +655,60 @@ function resetPillAppearance(pill) {
   pill.querySelector('.pill-text').textContent  = 'May I?';
 }
 
-// Load profile with 5-second in-memory cache
+// Load profile with 5-second in-memory cache — silently handles invalidated context
 async function getProfile() {
   if (cachedProfile && (Date.now() - profileLoadTs) < 5000) return cachedProfile;
   return new Promise((res) => {
-    chrome.storage.local.get(['profiles', 'activeId'], (d) => {
-      cachedProfile = d.profiles?.[d.activeId] || null;
-      profileLoadTs = Date.now();
-      res(cachedProfile);
-    });
+    try {
+      chrome.storage.local.get(['profiles', 'activeId'], (d) => {
+        if (chrome.runtime.lastError) { res(null); return; }
+        cachedProfile = d.profiles?.[d.activeId] || null;
+        profileLoadTs = Date.now();
+        res(cachedProfile);
+      });
+    } catch {
+      res(null); // extension context invalidated — return null quietly
+    }
   });
 }
 
 async function showPill(input, profileKey) {
-  const rect = input.getBoundingClientRect();
+  try {
+    const rect = input.getBoundingClientRect();
 
-  // Skip if field is not actually visible within the viewport
-  if (
-    rect.width  <= 0 || rect.height <= 0 ||
-    rect.right  <= 10 || rect.bottom <= 0 ||
-    rect.top    >= window.innerHeight ||
-    rect.left   >= window.innerWidth
-  ) return;
+    // Skip if field is off-screen or too close to the left edge
+    // rect.right < 180 → pill (max 160px) would overflow off the left side of the viewport
+    if (
+      rect.width  <= 0 || rect.height <= 0 ||
+      rect.right  < 180 || rect.bottom <= 0 ||
+      rect.top    >= window.innerHeight ||
+      rect.left   >= window.innerWidth
+    ) return;
 
-  const pill = getPill();
-  pillTarget = { input, profileKey };
+    const pill = getPill();
+    pillTarget = { input, profileKey };
 
-  const pillH      = 26;
-  const rightOffset = Math.max(4, window.innerWidth - rect.right + 6);
+    const pillH      = 26;
+    const rightOffset = Math.max(4, window.innerWidth - rect.right + 6);
 
-  // Anchor RIGHT edge of pill to field's right edge — expands leftward, stays in viewport
-  pill.style.top           = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
-  pill.style.left          = '';
-  pill.style.right         = `${rightOffset}px`;
-  pill.style.opacity       = '1';
-  pill.style.pointerEvents = 'all';
-  resetPillAppearance(pill);
-  clearTimeout(pillHideTimer);
+    // Anchor RIGHT edge of pill to field's right edge — expands leftward, stays in viewport
+    pill.style.top           = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
+    pill.style.left          = '';
+    pill.style.right         = `${rightOffset}px`;
+    pill.style.opacity       = '1';
+    pill.style.pointerEvents = 'all';
+    resetPillAppearance(pill);
+    clearTimeout(pillHideTimer);
 
-  // Pre-fetch profile so hover response is instant
-  const profile = await getProfile();
-  const hasData = !!(profile && getProfileValue(profile, profileKey));
-  // Only update dataset if pill is still on this field
-  if (pillTarget?.profileKey === profileKey) {
-    pill.dataset.hasData = hasData ? '1' : '0';
+    // Pre-fetch profile so hover response is instant
+    const profile = await getProfile();
+    const hasData = !!(profile && getProfileValue(profile, profileKey));
+    // Only update dataset if pill is still on this field
+    if (pillTarget?.profileKey === profileKey) {
+      pill.dataset.hasData = hasData ? '1' : '0';
+    }
+  } catch (_) {
+    // Swallow any error (extension context invalidated, detached DOM, etc.)
   }
 }
 
@@ -769,25 +781,29 @@ document.addEventListener('mouseout', (e) => {
 
 // Pill click → fill field (only if data exists)
 document.addEventListener('click', async (e) => {
-  if (!e.target.closest('#ghost-pill')) return;
-  if (!pillTarget) return;
+  try {
+    if (!e.target.closest('#ghost-pill')) return;
+    if (!pillTarget) return;
 
-  const pill    = document.getElementById('ghost-pill');
-  const hasData = pill?.dataset.hasData === '1';
-  if (!hasData) return; // no data — do nothing on click
+    const pill    = document.getElementById('ghost-pill');
+    const hasData = pill?.dataset.hasData === '1';
+    if (!hasData) return; // no data — do nothing on click
 
-  // Capture before hidePill(0) nulls pillTarget
-  const { input, profileKey } = pillTarget;
-  hidePill(0);
+    // Capture before hidePill(0) nulls pillTarget
+    const { input, profileKey } = pillTarget;
+    hidePill(0);
 
-  const profile = await getProfile();
-  if (!profile || !input) return;
+    const profile = await getProfile();
+    if (!profile || !input) return;
 
-  const val = getProfileValue(profile, profileKey);
-  if (!val) return;
+    const val = getProfileValue(profile, profileKey);
+    if (!val) return;
 
-  nativeSet(input, val);
-  highlight(input);
+    nativeSet(input, val);
+    highlight(input);
+  } catch (_) {
+    // Swallow — extension context invalidated or DOM race
+  }
 });
 
 // Initial scan + MutationObserver for dynamic forms
