@@ -233,7 +233,7 @@
 <body>
   <div class="card">
     <div class="logo">👻 <span>GHOST</span></div>
-    <div class="subtitle">Voice Dictation</div>
+    <div class="subtitle">Profile Setup <span id="voiceBadge" style="color:#c084fc;font-size:0.75rem;margin-left:0.4rem;">+ Voice</span></div>
 
     <div class="progress-wrap">
       <div class="progress-bar" id="progressBar" style="width:0%"></div>
@@ -245,15 +245,14 @@
 
     <div class="field-label" id="fieldLabel">Starting…</div>
     <div class="field-name"  id="fieldName">—</div>
-    <div class="field-value" id="fieldValue"></div>
 
     <div class="mic-meter" id="micMeter"><div class="mic-bar" id="micBar"></div></div>
-    <div class="mic-label" id="micLabel">Mic level — if bar doesn't move when you speak, check your mic selection</div>
+    <div class="mic-label" id="micLabel">Mic level — if bar doesn't move when you speak, check your mic</div>
 
-    <div class="status" id="status">Waiting for microphone permission…</div>
+    <div class="status" id="status">Starting…</div>
 
-    <input  class="text-input"     id="textInput"  type="text" />
-    <button class="btn-text-submit" id="textSubmit">Submit ↵</button>
+    <input  class="text-input"     id="textInput"  type="text" style="display:none" />
+    <button class="btn-text-submit" id="textSubmit" style="display:none">Next ↵</button>
 
     <div class="btn-row" id="btnRow">
       <button class="btn-skip" id="skipBtn">Skip field</button>

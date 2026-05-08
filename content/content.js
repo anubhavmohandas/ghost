@@ -694,13 +694,16 @@ async function showPill(input, profileKey) {
     const pill = getPill();
     pillTarget = { input, profileKey };
 
-    const pillH      = 26;
-    const rightOffset = Math.max(4, window.innerWidth - rect.right + 6);
+    const pillH   = 26;
+    const pillW   = 168; // approx rendered width of pill
 
-    // Anchor RIGHT edge of pill to field's right edge — expands leftward, stays in viewport
+    // Position pill so its RIGHT edge aligns with the field's right edge.
+    // Use left-anchoring so the pill never drifts to the wrong side of the screen.
+    const pillLeft = Math.max(4, rect.right - pillW - 2);
+
     pill.style.top           = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
-    pill.style.left          = '';
-    pill.style.right         = `${rightOffset}px`;
+    pill.style.left          = `${pillLeft}px`;
+    pill.style.right         = '';
     pill.style.opacity       = '1';
     pill.style.pointerEvents = 'all';
     resetPillAppearance(pill);
@@ -726,6 +729,7 @@ function hidePill(delay = 300) {
       resetPillAppearance(pill);
       pill.style.opacity       = '0';
       pill.style.pointerEvents = 'none';
+      pill.style.left          = '';
       pill.style.right         = '';
     }
     pillTarget = null;
