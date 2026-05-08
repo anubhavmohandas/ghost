@@ -555,11 +555,11 @@ document.addEventListener('keydown', (e) => {
 // No data   → sad ghost, "tune mujhe data diya hi nai 🥹"
 
 const PILL_HAS_DATA_MSGS = [
-  'Done bro done 🕺',
-  'tera kaam mera kaam 💅',
-  'haan haan, karunga 😤',
-  'bata de bas, bhar dunga 👻',
-  'ek second bhai 🫡',
+  'Done bro 🕺',
+  'karta hoon 💅',
+  'haan bhai 🫡',
+  'bhar dunga 👻',
+  'chill bro 😤',
 ];
 
 let ghostPill      = null;
@@ -591,6 +591,7 @@ pillStyle.textContent = `
     white-space: nowrap;
     user-select: none;
     overflow: hidden;
+    max-width: 160px;
     background-size: 200% 100%;
     background-position: 100% 0;
   }
@@ -724,14 +725,14 @@ function attachHoverListeners() {
   });
 }
 
-// Pill mouseenter → apply data-aware state (once only — ignore child re-triggers)
+// Pill mouseenter → apply data-aware state
+// relatedTarget check ensures we only fire when entering from OUTSIDE the pill
 document.addEventListener('mouseover', (e) => {
   const pill = document.getElementById('ghost-pill');
   if (!pill || !e.target.closest('#ghost-pill')) return;
+  // Came from inside the pill (moving between child elements) — skip
+  if (pill.contains(e.relatedTarget)) return;
   clearTimeout(pillHideTimer);
-
-  // Already in a hover state — mouse just moved between inner elements, do nothing
-  if (pill.classList.contains('pill-sweep') || pill.classList.contains('pill-sad')) return;
 
   const hasData = pill.dataset.hasData === '1';
   if (hasData) {
@@ -745,10 +746,12 @@ document.addEventListener('mouseover', (e) => {
   }
 });
 
-// Pill mouseleave → reset
+// Pill mouseleave → reset only when leaving to OUTSIDE the pill
 document.addEventListener('mouseout', (e) => {
   const pill = document.getElementById('ghost-pill');
   if (!pill || !e.target.closest('#ghost-pill')) return;
+  // Moving to a child inside the pill — don't reset
+  if (pill.contains(e.relatedTarget)) return;
   resetPillAppearance(pill);
   hidePill(300);
 });
