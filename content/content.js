@@ -670,8 +670,10 @@ async function showPill(input, profileKey) {
 
   const rect  = input.getBoundingClientRect();
   const pillH = 26;
+  // Anchor RIGHT edge of pill to field's right edge — expands leftward, never off-screen
   pill.style.top          = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
-  pill.style.left         = `${Math.max(4, rect.right - 88)}px`;
+  pill.style.left         = '';
+  pill.style.right        = `${Math.max(4, window.innerWidth - rect.right + 6)}px`;
   pill.style.opacity      = '1';
   pill.style.pointerEvents = 'all';
   resetPillAppearance(pill);
@@ -692,8 +694,9 @@ function hidePill(delay = 300) {
     const pill = document.getElementById('ghost-pill');
     if (pill) {
       resetPillAppearance(pill);
-      pill.style.opacity      = '0';
+      pill.style.opacity       = '0';
       pill.style.pointerEvents = 'none';
+      pill.style.right         = '';
     }
     pillTarget = null;
   }, delay);
