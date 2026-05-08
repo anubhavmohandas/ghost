@@ -742,7 +742,7 @@ function attachHoverListeners() {
 
     input.addEventListener('mouseenter', () => {
       if (!isVisible(input, false)) return;
-      showPill(input, mappedKey);
+      showPill(input, mappedKey).catch(() => {}); // never let this surface as unhandled rejection
     });
     input.addEventListener('mouseleave', () => hidePill(350));
   });
