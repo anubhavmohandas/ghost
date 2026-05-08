@@ -2,18 +2,18 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0a0614;
-  --surface: #110d20;
-  --surface2: #1a1530;
-  --border: #2a2245;
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
-  --accent-glow: rgba(124,58,237,0.18);
-  --cyan: #22d3ee;
+  --bg: #071a18;
+  --surface: #0d2b27;
+  --surface2: #133830;
+  --border: #1e4f47;
+  --accent: #ff6b6b;
+  --accent-hover: #ff4f4f;
+  --accent-glow: rgba(255,107,107,0.18);
+  --teal: #2dd4bf;
   --danger: #ef4444;
   --success: #22c55e;
-  --text: #e8e4f4;
-  --text-muted: #7c6fa8;
+  --text: #e0f2f0;
+  --text-muted: #5f9e96;
   --radius: 6px;
   --radius-sm: 4px;
 }
@@ -45,7 +45,7 @@ body {
   color: var(--text);
 }
 .logo span:first-of-type {
-  background: linear-gradient(90deg, #d4d0ff 0%, var(--cyan) 100%);
+  background: linear-gradient(90deg, #ff6b6b 0%, #2dd4bf 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -118,7 +118,7 @@ body {
   transition: color 0.15s, border-color 0.15s;
 }
 .tab:hover { color: var(--text); }
-.tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+.tab.active { color: var(--teal); border-bottom-color: var(--teal); }
 
 /* === Tab Content === */
 .tab-content { flex: 1; }
@@ -129,7 +129,7 @@ body {
 .section-label {
   font-size: 9.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--cyan); opacity: 0.75;
+  color: var(--teal); opacity: 0.75;
   margin: 10px 0 6px;
   padding-bottom: 3px;
   border-bottom: 1px solid var(--border);
@@ -301,6 +301,50 @@ hr { border: none; border-top: 1px solid var(--border); }
 @keyframes fadeUp {
   from { opacity:0; transform: translateX(-50%) translateY(6px); }
   to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Date picker */
+input[type="date"] {
+  color-scheme: dark;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6) sepia(1) saturate(3) hue-rotate(120deg);
+  cursor: pointer;
+  opacity: 0.7;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Dictation */
+.dictation-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.dictation-bar .dictation-status {
+  flex: 1; font-size: 11px; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.btn-dictate {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: var(--radius);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text);
+  transition: all 0.15s;
+}
+.btn-dictate:hover { border-color: var(--accent); color: var(--accent); }
+.btn-dictate.listening {
+  background: rgba(255,107,107,0.15);
+  border-color: var(--accent); color: var(--accent);
+  animation: pulse 1s infinite;
+}
+.btn-dictate.done { border-color: var(--success); color: var(--success); }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(255,107,107,0); }
 }
 
 /* Scrollbar */

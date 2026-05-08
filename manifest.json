@@ -39,8 +39,8 @@
   "commands": {
     "trigger-autofill": {
       "suggested_key": {
-        "default": "Alt+F",
-        "mac": "Alt+F"
+        "default": "Ctrl+Shift+F",
+        "mac": "Command+Shift+F"
       },
       "description": "Trigger autofill on current page"
     }

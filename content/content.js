@@ -540,5 +540,10 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
 
 // ── Alt+F shortcut from page ──────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
-  if (e.altKey && e.key === 'f') chrome.runtime.sendMessage({ type: 'SHORTCUT_FILL' });
+  // Cmd+Shift+F on Mac, Ctrl+Shift+F on others
+  const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const trigger = isMac
+    ? (e.metaKey && e.shiftKey && e.key === 'f')
+    : (e.ctrlKey && e.shiftKey && e.key === 'F');
+  if (trigger) chrome.runtime.sendMessage({ type: 'SHORTCUT_FILL' });
 });

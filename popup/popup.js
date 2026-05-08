@@ -412,5 +412,147 @@ function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── DOB → Auto Age ────────────────────────────────────────────────────────────
+function calcAge(dobValue) {
+  if (!dobValue) return '';
+  const dob  = new Date(dobValue);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age > 0 ? String(age) : '';
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.field === 'dob') {
+    const ageEl = $('ageInput');
+    if (ageEl) {
+      ageEl.value = calcAge(e.target.value);
+      // also persist into profile
+      const p = profiles[activeId];
+      if (p?.personal) p.personal.age = ageEl.value;
+    }
+  }
+});
+
+// ── Dictation Mode ────────────────────────────────────────────────────────────
+
+// Fields to cycle through during dictation (label + data-field key)
+const DICTATION_FIELDS = [
+  { label: 'First Name',    section: 'personal',     key: 'firstName' },
+  { label: 'Last Name',     section: 'personal',     key: 'lastName' },
+  { label: 'Email',         section: 'contact',      key: 'email' },
+  { label: 'Phone',         section: 'contact',      key: 'phone' },
+  { label: 'Date of Birth', section: 'personal',     key: 'dob' },
+  { label: 'City',          section: 'contact',      key: 'city' },
+  { label: 'State',         section: 'contact',      key: 'state' },
+  { label: 'Country',       section: 'contact',      key: 'country' },
+  { label: 'Company',       section: 'professional', key: 'company' },
+  { label: 'Job Title',     section: 'professional', key: 'jobTitle' },
+  { label: 'Username',      section: 'credentials',  key: 'username' },
+];
+
+let dictating    = false;
+let dictIndex    = 0;
+let recognition  = null;
+
+const dictateBtn    = $('dictateBtn');
+const dictateStatus = $('dictateStatus');
+const dictateSkip   = $('dictateSkip');
+
+function stopDictation(msg = 'Dictation stopped') {
+  dictating = false;
+  if (recognition) { try { recognition.stop(); } catch {} recognition = null; }
+  dictateBtn.textContent = '🎤 Dictate';
+  dictateBtn.className   = 'btn-dictate';
+  dictateStatus.textContent = msg;
+  dictateSkip.style.display = 'none';
+}
+
+function nextDictationField() {
+  if (dictIndex >= DICTATION_FIELDS.length) {
+    saveCurrentProfile();
+    stopDictation('All done — profile saved ✓');
+    dictateBtn.classList.add('done');
+    return;
+  }
+
+  const field = DICTATION_FIELDS[dictIndex];
+  dictateStatus.textContent = `🎤 Say your ${field.label}...`;
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    stopDictation('Speech recognition not supported in this browser');
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = 'en-IN'; // Indian English — handles accents better
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (e) => {
+    const val = e.results[0][0].transcript.trim();
+    const p = profiles[activeId];
+    if (p?.[field.section]) {
+      p[field.section][field.key] = val;
+      // update UI input
+      const el = document.querySelector(`[data-field="${field.key}"][data-section="${field.section}"]`);
+      if (el) el.value = val;
+      // auto age if DOB was dictated
+      if (field.key === 'dob') {
+        const parsed = new Date(val);
+        if (!isNaN(parsed)) {
+          const iso = parsed.toISOString().split('T')[0];
+          if (el) el.value = iso;
+          p.personal.dob = iso;
+          const ageEl = $('ageInput');
+          if (ageEl) { ageEl.value = calcAge(iso); p.personal.age = ageEl.value; }
+        }
+      }
+    }
+    dictateStatus.textContent = `✓ ${field.label}: "${val}"`;
+    dictIndex++;
+    setTimeout(() => { if (dictating) nextDictationField(); }, 800);
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') {
+      dictateStatus.textContent = `No speech detected — skipping ${field.label}`;
+      dictIndex++;
+      setTimeout(() => { if (dictating) nextDictationField(); }, 600);
+    } else {
+      stopDictation(`Error: ${e.error}`);
+    }
+  };
+
+  recognition.start();
+}
+
+dictateBtn.addEventListener('click', () => {
+  if (dictating) {
+    stopDictation('Dictation cancelled');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showToast('Speech API not supported here', 'error');
+    return;
+  }
+  dictating  = true;
+  dictIndex  = 0;
+  dictateBtn.textContent = '⏹ Stop';
+  dictateBtn.className   = 'btn-dictate listening';
+  dictateSkip.style.display = 'inline-block';
+  nextDictationField();
+});
+
+dictateSkip.addEventListener('click', () => {
+  if (!dictating) return;
+  try { if (recognition) recognition.stop(); } catch {}
+  dictIndex++;
+  setTimeout(() => { if (dictating) nextDictationField(); }, 200);
+});
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 init().catch(console.error);
