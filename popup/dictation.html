@@ -184,6 +184,50 @@
     }
     .step.current .step-dot { background: #c084fc; }
     .step.done    .step-dot { background: #4ade80; }
+
+    /* Mic level meter */
+    .mic-meter {
+      display: none;
+      margin: 0.75rem auto 0.5rem;
+      background: #1a1333;
+      border-radius: 99px;
+      height: 8px;
+      width: 80%;
+      overflow: hidden;
+    }
+    .mic-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #7c3aed, #fb923c);
+      transition: width 0.05s linear;
+    }
+    .mic-label {
+      font-size: 0.7rem;
+      color: #7c6aaa;
+      margin-bottom: 0.5rem;
+      display: none;
+    }
+
+    /* Text fallback input */
+    .text-input {
+      display: none;
+      width: 100%;
+      margin: 0.75rem 0 0.5rem;
+      padding: 0.6rem 0.9rem;
+      background: #1a1333;
+      border: 1px solid #3d2d6e;
+      border-radius: 8px;
+      color: #e2d9f3;
+      font-size: 0.9rem;
+    }
+    .text-input:focus { outline: none; border-color: #7c3aed; }
+    .btn-text-submit {
+      display: none;
+      background: #7c3aed;
+      color: #fff;
+      margin-top: 0.25rem;
+    }
   </style>
 </head>
 <body>
@@ -202,7 +246,14 @@
     <div class="field-label" id="fieldLabel">Starting…</div>
     <div class="field-name"  id="fieldName">—</div>
     <div class="field-value" id="fieldValue"></div>
-    <div class="status"      id="status">Waiting for microphone permission…</div>
+
+    <div class="mic-meter" id="micMeter"><div class="mic-bar" id="micBar"></div></div>
+    <div class="mic-label" id="micLabel">Mic level — if bar doesn't move when you speak, check your mic selection</div>
+
+    <div class="status" id="status">Waiting for microphone permission…</div>
+
+    <input  class="text-input"     id="textInput"  type="text" />
+    <button class="btn-text-submit" id="textSubmit">Submit ↵</button>
 
     <div class="btn-row" id="btnRow">
       <button class="btn-skip" id="skipBtn">Skip field</button>
