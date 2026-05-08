@@ -25,7 +25,10 @@
       <span>GHOST</span>
       <span class="logo-sub">General Handler of Stored Templates</span>
     </div>
-    <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+    <div style="display:flex;gap:4px;align-items:center">
+      <button class="icon-btn" id="themesBtn" title="Themes">🎨</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
   </header>
 
   <!-- Profile Bar -->
@@ -43,6 +46,12 @@
     </button>
     <button class="btn-fill btn-outline" id="fillSmartBtn">Smart Fill</button>
     <button class="btn-fill btn-ghost-fill" id="previewBtn">👁 Preview</button>
+  </div>
+
+  <!-- Site Binding Bar -->
+  <div class="site-bar" id="siteBar">
+    <span class="site-hostname" id="siteHostname"></span>
+    <button class="btn-small btn-bind" id="bindBtn" title="Bind this profile to current site">🔗 Bind site</button>
   </div>
 
   <!-- Dictation Bar -->
@@ -260,6 +269,28 @@
         <button class="icon-btn" id="closePreview">✕</button>
       </div>
       <div id="previewBody" class="settings-body" style="font-size:11px;gap:4px;"></div>
+    </div>
+  </div>
+
+  <!-- Themes Overlay -->
+  <div class="settings-overlay hidden" id="themesOverlay">
+    <div class="settings-panel themes-panel">
+      <div class="settings-header">
+        <span>Themes</span>
+        <button class="icon-btn" id="closeThemes">✕</button>
+      </div>
+      <!-- Preset Cards -->
+      <div class="theme-presets-grid" id="themePresetsGrid"></div>
+      <!-- Custom Builder -->
+      <div class="theme-section-title">Custom Builder</div>
+      <div class="custom-builder">
+        <div class="color-grid" id="colorGrid"></div>
+        <div class="theme-actions">
+          <button class="btn-small btn-primary" id="applyCustomBtn">Apply</button>
+          <button class="btn-small btn-ghost" id="saveCustomBtn">💾 Save</button>
+          <button class="btn-small btn-ghost" id="resetCustomBtn">↺ Reset</button>
+        </div>
+      </div>
     </div>
   </div>
 

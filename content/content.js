@@ -538,12 +538,160 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   return true;
 });
 
-// ── Alt+F shortcut from page ──────────────────────────────────────────────────
+// ── Cmd+Shift+F / Ctrl+Shift+F shortcut ──────────────────────────────────────
 document.addEventListener('keydown', (e) => {
-  // Cmd+Shift+F on Mac, Ctrl+Shift+F on others
   const isMac = navigator.platform.toUpperCase().includes('MAC');
   const trigger = isMac
     ? (e.metaKey && e.shiftKey && e.key === 'f')
     : (e.ctrlKey && e.shiftKey && e.key === 'F');
   if (trigger) chrome.runtime.sendMessage({ type: 'SHORTCUT_FILL' });
+});
+
+// ── Hover Pill ────────────────────────────────────────────────────────────────
+// A tiny "👻 May I?" pill appears at the right edge of any detectable field.
+// Clicking it fills just that one field from the saved profile.
+
+let ghostPill    = null;
+let pillTarget   = null;
+let pillHideTimer = null;
+let cachedProfile = null;
+
+// Inject pill styles once
+const pillStyle = document.createElement('style');
+pillStyle.textContent = `
+  #ghost-pill {
+    position: fixed;
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px 3px 5px;
+    background: #0d2b27;
+    border: 1px solid #ff6b6b;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #e0f2f0;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    pointer-events: all;
+    transition: opacity 0.15s, transform 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  #ghost-pill:hover {
+    background: #ff6b6b;
+    color: #fff;
+    transform: scale(1.05);
+  }
+  #ghost-pill .pill-ghost { font-size: 12px; line-height: 1; }
+  #ghost-pill .pill-text  { font-weight: 600; letter-spacing: 0.02em; }
+`;
+document.head.appendChild(pillStyle);
+
+function createPill() {
+  const el = document.createElement('div');
+  el.id = 'ghost-pill';
+  el.innerHTML = '<span class="pill-ghost">👻</span><span class="pill-text">May I?</span>';
+  document.body.appendChild(el);
+  return el;
+}
+
+function getPill() {
+  if (!ghostPill || !document.getElementById('ghost-pill')) {
+    ghostPill = createPill();
+  }
+  return ghostPill;
+}
+
+function showPill(input, profileKey) {
+  const pill = getPill();
+  pillTarget = { input, profileKey };
+
+  const rect = input.getBoundingClientRect();
+  // Position: vertically centered on field, just inside the right edge
+  const pillH = 24;
+  const top  = rect.top + (rect.height - pillH) / 2;
+  const left = rect.right - 80; // 80px from right edge of field
+
+  pill.style.top  = `${Math.max(4, top)}px`;
+  pill.style.left = `${Math.max(4, left)}px`;
+  pill.style.opacity = '1';
+  pill.style.pointerEvents = 'all';
+
+  clearTimeout(pillHideTimer);
+}
+
+function hidePill(delay = 300) {
+  clearTimeout(pillHideTimer);
+  pillHideTimer = setTimeout(() => {
+    const pill = document.getElementById('ghost-pill');
+    if (pill) { pill.style.opacity = '0'; pill.style.pointerEvents = 'none'; }
+    pillTarget = null;
+  }, delay);
+}
+
+// Load profile from storage for single-field fill
+async function getProfile() {
+  return new Promise((res) => {
+    chrome.storage.local.get(['profiles','activeId'], (d) => {
+      const id = d.activeId;
+      res(d.profiles?.[id] || null);
+    });
+  });
+}
+
+// Attach hover listeners — scan once on load, re-scan on DOM changes
+function attachHoverListeners() {
+  const selector = 'input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea';
+
+  document.querySelectorAll(selector).forEach((input) => {
+    if (input.__ghostHover) return;
+    input.__ghostHover = true;
+
+    // Detect which profile key this input maps to
+    let mappedKey = null;
+    for (const [key, sig] of Object.entries(FIELD_MAP)) {
+      if (matchesSignature(input, sig)) { mappedKey = key; break; }
+    }
+    if (!mappedKey) return; // not a recognizable field — no pill
+
+    input.addEventListener('mouseenter', () => {
+      if (!isVisible(input, false)) return;
+      showPill(input, mappedKey);
+    });
+
+    input.addEventListener('mouseleave', () => hidePill(350));
+  });
+}
+
+// Pill click → fill that one field
+document.addEventListener('click', async (e) => {
+  if (!e.target.closest('#ghost-pill')) return;
+  if (!pillTarget) return;
+
+  hidePill(0);
+  const profile = await getProfile();
+  if (!profile) return;
+
+  const { input, profileKey } = pillTarget;
+  const val = getProfileValue(profile, profileKey);
+  if (!val) return;
+
+  nativeSet(input, val);
+  highlight(input);
+});
+
+// Pill hover — keep it visible while mouse is on it
+document.addEventListener('mouseover', (e) => {
+  if (e.target.closest('#ghost-pill')) clearTimeout(pillHideTimer);
+});
+document.addEventListener('mouseout', (e) => {
+  if (e.target.closest('#ghost-pill')) hidePill(300);
+});
+
+// Initial scan + MutationObserver for dynamic forms
+attachHoverListeners();
+new MutationObserver(() => attachHoverListeners()).observe(document.body, {
+  childList: true, subtree: true,
 });
