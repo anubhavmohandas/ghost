@@ -600,7 +600,7 @@ pillStyle.textContent = `
     /* Start hidden & non-interactive — showPill() makes it visible */
     opacity: 0;
     pointer-events: none;
-    transition: none;
+    transition: opacity 0.12s, transform 0.12s, border-color 0.15s;
     white-space: nowrap;
     user-select: none;
     overflow: hidden;
@@ -707,16 +707,22 @@ async function showPill(input, profileKey) {
     pillTarget = { input, profileKey };
 
     const pillH   = 26;
-    const pillW   = 168; // approx rendered width of pill
+    const pillW   = 110; // "👻 May I?" at 11px + padding ≈ 105–115px
 
-    // Position pill so its RIGHT edge aligns with the field's right edge.
-    // Use left-anchoring so the pill never drifts to the wrong side of the screen.
-    const pillLeft = Math.max(4, rect.right - pillW - 2);
+    // Pill sits inside the field — right edge 8px from field's right border.
+    // Use left-anchoring (never right:) so position is always relative to viewport left,
+    // avoiding the "slide across screen" issue from right: X large values.
+    const pillLeft = rect.right - pillW - 8;
+    if (pillLeft < 4) return; // field too narrow/left — skip
 
-    // Instant position — no animation, no slide
+    // Set position with transition disabled so it snaps instantly (no travelling).
+    // Then restore transition so opacity/transform/border-color can still animate.
+    pill.style.transition    = 'none';
     pill.style.top           = `${Math.max(4, rect.top + (rect.height - pillH) / 2)}px`;
     pill.style.left          = `${pillLeft}px`;
     pill.style.right         = '';
+    void pill.offsetWidth;   // force reflow — commits position before transition re-enables
+    pill.style.transition    = '';
     pill.style.opacity       = '1';
     pill.style.pointerEvents = 'all';
     resetPillAppearance(pill);
@@ -802,7 +808,7 @@ function attachHoverListeners() {
       if (!isVisible(input, false)) return;
       showPill(input, mappedKey).catch(() => {}); // never let this surface as unhandled rejection
     });
-    input.addEventListener('mouseleave', () => hidePill(0));
+    input.addEventListener('mouseleave', () => hidePill(150));
   });
 }
 
