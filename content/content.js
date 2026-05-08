@@ -758,11 +758,13 @@ document.addEventListener('click', async (e) => {
   const hasData = pill?.dataset.hasData === '1';
   if (!hasData) return; // no data — do nothing on click
 
-  hidePill(0);
-  const profile = await getProfile();
-  if (!profile) return;
-
+  // Capture before hidePill(0) nulls pillTarget
   const { input, profileKey } = pillTarget;
+  hidePill(0);
+
+  const profile = await getProfile();
+  if (!profile || !input) return;
+
   const val = getProfileValue(profile, profileKey);
   if (!val) return;
 
