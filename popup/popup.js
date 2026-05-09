@@ -227,12 +227,25 @@ function loadProfileIntoUI(id) {
   const p = profiles[id];
   if (!p) return;
 
-  // Bind all [data-field][data-section] inputs
+  const deferred = []; // type="password" fields — set after Chrome's autocomplete manager settles
+
   document.querySelectorAll('[data-field][data-section]').forEach((el) => {
     const sec = el.dataset.section;
     const key = el.dataset.field;
-    if (p[sec]?.[key] !== undefined) el.value = p[sec][key];
+    if (p[sec]?.[key] === undefined) return;
+    const val = p[sec][key];
+    if (el.type === 'password' && val) {
+      deferred.push({ el, val }); // defer — Chrome clears password values set at DOM load time
+    } else {
+      el.value = val;
+    }
   });
+
+  // Chrome deliberately clears programmatically-set type="password" values in
+  // extension popups during its autocomplete pass. 250ms defers past that window.
+  if (deferred.length) {
+    setTimeout(() => deferred.forEach(({ el, val }) => { el.value = val; }), 250);
+  }
 
   renderCustomFields(p.custom || []);
   renderPayloads(p.payloads || []);

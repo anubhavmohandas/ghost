@@ -548,13 +548,14 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   return true;
 });
 
-// ── Cmd+Shift+F / Ctrl+Shift+F shortcut ──────────────────────────────────────
+// ── Cmd+Shift+G / Ctrl+Shift+G — trigger autofill (page-level fallback) ──────
+// Mirrors the native command shortcut in manifest.json so fill works even if
+// the native command registration fails (e.g. Brave conflict resolution).
 document.addEventListener('keydown', (e) => {
   const isMac = navigator.platform.toUpperCase().includes('MAC');
-  // e.key varies by platform/shift state — normalise to lowercase
   const trigger = isMac
-    ? (e.metaKey && e.shiftKey && e.key.toLowerCase() === 'f')
-    : (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f');
+    ? (e.metaKey && e.shiftKey && e.key.toLowerCase() === 'g')
+    : (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'g');
   if (!trigger) return;
   try { chrome.runtime.sendMessage({ type: 'SHORTCUT_FILL' }); } catch { /* context invalidated */ }
 });
