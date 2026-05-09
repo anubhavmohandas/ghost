@@ -45,7 +45,7 @@ const skipBtn     = document.getElementById('skipBtn');
 const stopBtn     = document.getElementById('stopBtn');
 const donePanel   = document.getElementById('donePanel');
 const mainPanel   = document.getElementById('mainPanel');
-const braveNotice = document.getElementById('braveNotice');
+const sysTip     = document.getElementById('sysTip');
 
 // ── State ──────────────────────────────────────────────────────────────────────
 let index           = 0;
@@ -120,7 +120,7 @@ function startListening() {
     if (e.error === 'network' || e.error === 'service-not-allowed') {
       voiceAvailable = false;
       setVoiceOff();
-      showBraveNotice();
+      // tip always visible
     } else if (e.error === 'not-allowed') {
       voiceAvailable = false;
       setVoiceOff();
@@ -155,9 +155,7 @@ function setVoiceOff() {
   textInput.focus();
 }
 
-function showBraveNotice() {
-  if (braveNotice) braveNotice.style.display = 'block';
-}
+
 
 // ── Show field ─────────────────────────────────────────────────────────────────
 function showField() {
@@ -261,8 +259,8 @@ orbEl.addEventListener('click', () => {
 skipBtn.addEventListener('click', () => advance(''));
 stopBtn.addEventListener('click', () => { stopped = true; finish(); });
 document.getElementById('closeBtn').addEventListener('click', () => window.close());
-document.getElementById('dismissBrave')?.addEventListener('click', () => {
-  if (braveNotice) braveNotice.style.display = 'none';
+document.getElementById('dismissTip')?.addEventListener('click', () => {
+  if (sysTip) sysTip.style.display = 'none';
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────────

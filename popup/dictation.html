@@ -19,15 +19,15 @@
     /* ── Sidebar ── */
     .sidebar {
       width: 210px;
-      background: #0a0818;
-      border-right: 1px solid #1e1640;
+      background: #100c28;
+      border-right: 1px solid #2e2060;
       padding: 1.25rem 0;
       overflow-y: auto;
       flex-shrink: 0;
     }
     .sidebar-title {
       font-size: 0.62rem;
-      color: #3a2a70;
+      color: #5a4a9a;
       text-transform: uppercase;
       letter-spacing: 0.12em;
       padding: 0 1rem 0.6rem;
@@ -52,7 +52,7 @@
     .step.current .step-dot { background: #a78bfa; box-shadow: 0 0 6px #a78bfa88; }
     .step-label {
       font-size: 0.75rem;
-      color: #4a3a80;
+      color: #6a5a9a;
       flex: 1;
       white-space: nowrap;
       overflow: hidden;
@@ -167,25 +167,28 @@
     .text-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.18); }
     .text-input::placeholder { color: #3a2a60; }
 
-    /* Brave notice */
-    .brave-notice {
-      display: none;
-      background: #1c1030;
-      border: 1px solid #4c1d95;
+    /* System dictation tip */
+    .sys-tip {
+      background: #0e1f2e;
+      border: 1px solid #1e4060;
       border-radius: 8px;
       padding: 0.75rem 1rem;
       font-size: 0.78rem;
-      color: #a78bfa;
+      color: #7dd3fc;
       margin-bottom: 1rem;
       text-align: left;
-      line-height: 1.5;
+      line-height: 1.6;
       position: relative;
     }
-    .brave-notice strong { color: #c4b5fd; display: block; margin-bottom: 0.2rem; }
-    .brave-notice a { color: #818cf8; }
-    #dismissBrave {
+    .sys-tip strong { color: #bae6fd; display: block; margin-bottom: 0.25rem; }
+    .sys-tip kbd {
+      background: #1e3a5f; border: 1px solid #2563eb;
+      border-radius: 4px; padding: 1px 5px;
+      font-size: 0.72rem; color: #93c5fd;
+    }
+    #dismissTip {
       position: absolute; top: 0.5rem; right: 0.6rem;
-      background: none; border: none; color: #6a5a9a;
+      background: none; border: none; color: #4a7a9a;
       cursor: pointer; font-size: 0.9rem; padding: 0;
     }
 
@@ -247,14 +250,12 @@
 
       <div class="status" id="status">Starting…</div>
 
-      <!-- Brave voice notice -->
-      <div class="brave-notice" id="braveNotice">
-        <button id="dismissBrave">✕</button>
-        <strong>🦁 Voice blocked by Brave</strong>
-        Brave blocks Google speech by default. To enable voice dictation:<br>
-        Go to <strong>brave://settings/privacy</strong> → turn on
-        <em>"Allow Google login for extensions"</em> or disable Shields for this page.
-        <br>You can still type your answers below.
+      <!-- System dictation tip -->
+      <div class="sys-tip" id="sysTip">
+        <button id="dismissTip" title="Dismiss">✕</button>
+        <strong>🎙️ Use macOS dictation — press Fn Fn</strong>
+        Double-tap the <kbd>Fn</kbd> key → speak → it types here automatically.<br>
+        Then press <kbd>Enter</kbd> to save and move to next field.
       </div>
 
       <input class="text-input" id="textInput" type="text"
