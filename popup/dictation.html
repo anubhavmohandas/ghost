@@ -8,260 +8,282 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #1a1333;
+      background: #0f0c24;
       color: #e2d9f3;
       min-height: 100vh;
+      display: flex;
+    }
+
+    .layout { display: flex; width: 100%; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 210px;
+      background: #0a0818;
+      border-right: 1px solid #1e1640;
+      padding: 1.25rem 0;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .sidebar-title {
+      font-size: 0.62rem;
+      color: #3a2a70;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 0 1rem 0.6rem;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .step:hover { background: #150f30; }
+    .step.current { background: #1e1640; }
+    .step-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #2a1e5a;
+      flex-shrink: 0;
+    }
+    .step.done    .step-dot { background: #4ade80; }
+    .step.current .step-dot { background: #a78bfa; box-shadow: 0 0 6px #a78bfa88; }
+    .step-label {
+      font-size: 0.75rem;
+      color: #4a3a80;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .step.done    .step-label { color: #4ade80; }
+    .step.current .step-label { color: #c4b5fd; font-weight: 600; }
+    .step-val {
+      font-size: 0.62rem;
+      color: #3a2a60;
+      white-space: nowrap;
+      max-width: 70px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .step.done .step-val { color: #166534; }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
-    }
-
-    .card {
-      background: #241b44;
-      border: 1px solid #3d2d6e;
-      border-radius: 18px;
-      padding: 2.5rem 3rem;
-      max-width: 520px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      padding: 2.5rem 2rem;
+      gap: 0;
     }
 
     .logo {
-      font-size: 2rem;
+      font-size: 1.3rem;
       font-weight: 800;
-      color: #c084fc;
-      letter-spacing: 0.12em;
-      margin-bottom: 0.25rem;
+      color: #a78bfa;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
     }
     .logo span { color: #fb923c; }
 
-    .subtitle {
-      font-size: 0.8rem;
-      color: #7c6aaa;
-      margin-bottom: 2rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    /* Progress */
     .progress-wrap {
-      background: #1a1333;
+      width: 100%;
+      max-width: 460px;
+      background: #1a1440;
       border-radius: 99px;
-      height: 6px;
-      margin-bottom: 2rem;
+      height: 4px;
+      margin-bottom: 2.5rem;
       overflow: hidden;
     }
     .progress-bar {
       height: 100%;
       background: linear-gradient(90deg, #7c3aed, #fb923c);
       border-radius: 99px;
-      transition: width 0.4s ease;
+      transition: width 0.3s ease;
+      width: 0%;
     }
 
-    /* Mic orb */
-    .orb-wrap {
-      position: relative;
-      width: 100px;
-      height: 100px;
-      margin: 0 auto 1.5rem;
+    .field-card {
+      width: 100%;
+      max-width: 460px;
+      text-align: center;
     }
+
+    /* ── Orb ── */
     .orb {
-      width: 100px;
-      height: 100px;
+      width: 72px; height: 72px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #7c3aed, #3b1d7a);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2.5rem;
-      position: relative;
-      z-index: 1;
-      transition: transform 0.2s;
+      font-size: 2rem;
+      margin: 0 auto 1.25rem;
+      cursor: pointer;
+      transition: transform 0.15s;
+      user-select: none;
     }
+    .orb:hover { transform: scale(1.06); }
+    .orb:active { transform: scale(0.96); }
     .orb.listening {
-      animation: pulse-orb 1.2s ease-in-out infinite;
+      animation: pulse 1.2s ease-in-out infinite;
+      background: radial-gradient(circle at 35% 35%, #9333ea, #4c1d95);
     }
-    .orb.done-orb { background: radial-gradient(circle at 35% 35%, #16a34a, #064e1e); }
-    .orb.error-orb { background: radial-gradient(circle at 35% 35%, #dc2626, #7f1d1d); }
+    .orb.heard { background: radial-gradient(circle at 35% 35%, #16a34a, #064e1e); }
+    .orb.off   { background: radial-gradient(circle at 35% 35%, #374151, #111827); cursor: default; }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.5); transform: scale(1); }
+      50%      { box-shadow: 0 0 0 14px rgba(124,58,237,0); transform: scale(1.05); }
+    }
 
-    @keyframes pulse-orb {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.5); transform: scale(1); }
-      50%       { box-shadow: 0 0 0 18px rgba(124,58,237,0); transform: scale(1.04); }
-    }
-
-    /* Field display */
-    .field-label {
-      font-size: 0.75rem;
-      color: #7c6aaa;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 0.4rem;
-    }
-    .field-name {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #e2d9f3;
-      margin-bottom: 0.5rem;
-    }
-    .field-value {
-      font-size: 1rem;
-      color: #c084fc;
-      min-height: 1.5rem;
-      margin-bottom: 1.5rem;
-      font-style: italic;
-    }
+    .field-num  { font-size: 0.7rem; color: #4a3a80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.4rem; }
+    .field-name { font-size: 1.9rem; font-weight: 700; color: #e2d9f3; margin-bottom: 0.3rem; line-height: 1.2; }
+    .field-hint { font-size: 0.75rem; color: #4a3a80; margin-bottom: 1.2rem; min-height: 1rem; }
 
     .status {
-      font-size: 0.85rem;
-      color: #9d8cc4;
-      margin-bottom: 1.5rem;
-      min-height: 1.2rem;
-    }
-    .status.err { color: #f87171; }
-    .status.ok  { color: #4ade80; }
-
-    /* Buttons */
-    .btn-row {
-      display: flex;
-      gap: 0.75rem;
-      justify-content: center;
-    }
-    button {
-      padding: 0.55rem 1.4rem;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 600;
-      transition: opacity 0.15s, transform 0.1s;
-    }
-    button:active { transform: scale(0.97); }
-    button:disabled { opacity: 0.4; cursor: default; }
-
-    .btn-skip {
-      background: #2d2060;
-      color: #c084fc;
-      border: 1px solid #3d2d6e;
-    }
-    .btn-stop {
-      background: #7f1d1d;
-      color: #fca5a5;
-      border: 1px solid #991b1b;
-    }
-    .btn-close {
-      background: #16a34a;
-      color: #dcfce7;
-    }
-
-    /* Step list */
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-      margin-top: 1.5rem;
-      text-align: left;
-      max-height: 160px;
-      overflow-y: auto;
-    }
-    .step {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
       font-size: 0.8rem;
-      color: #7c6aaa;
-      padding: 0.2rem 0;
-    }
-    .step.current { color: #c084fc; font-weight: 600; }
-    .step.done    { color: #4ade80; }
-    .step-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #3d2d6e;
-      flex-shrink: 0;
-    }
-    .step.current .step-dot { background: #c084fc; }
-    .step.done    .step-dot { background: #4ade80; }
-
-    /* Mic level meter */
-    .mic-meter {
-      display: none;
-      margin: 0.75rem auto 0.5rem;
-      background: #1a1333;
-      border-radius: 99px;
-      height: 8px;
-      width: 80%;
-      overflow: hidden;
-    }
-    .mic-bar {
-      height: 100%;
-      width: 0%;
-      border-radius: 99px;
-      background: linear-gradient(90deg, #7c3aed, #fb923c);
-      transition: width 0.05s linear;
-    }
-    .mic-label {
-      font-size: 0.7rem;
-      color: #7c6aaa;
-      margin-bottom: 0.5rem;
-      display: none;
+      color: #6a5a9a;
+      margin-bottom: 1rem;
+      min-height: 1.2rem;
+      transition: color 0.2s;
     }
 
-    /* Text fallback input */
     .text-input {
-      display: none;
       width: 100%;
-      margin: 0.75rem 0 0.5rem;
-      padding: 0.6rem 0.9rem;
-      background: #1a1333;
-      border: 1px solid #3d2d6e;
-      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      background: #1a1440;
+      border: 1.5px solid #2e2060;
+      border-radius: 10px;
       color: #e2d9f3;
-      font-size: 0.9rem;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      margin-bottom: 1rem;
     }
-    .text-input:focus { outline: none; border-color: #7c3aed; }
-    .btn-text-submit {
+    .text-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.18); }
+    .text-input::placeholder { color: #3a2a60; }
+
+    /* Brave notice */
+    .brave-notice {
       display: none;
-      background: #7c3aed;
-      color: #fff;
-      margin-top: 0.25rem;
+      background: #1c1030;
+      border: 1px solid #4c1d95;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      color: #a78bfa;
+      margin-bottom: 1rem;
+      text-align: left;
+      line-height: 1.5;
+      position: relative;
     }
+    .brave-notice strong { color: #c4b5fd; display: block; margin-bottom: 0.2rem; }
+    .brave-notice a { color: #818cf8; }
+    #dismissBrave {
+      position: absolute; top: 0.5rem; right: 0.6rem;
+      background: none; border: none; color: #6a5a9a;
+      cursor: pointer; font-size: 0.9rem; padding: 0;
+    }
+
+    /* Kbd hints */
+    .kbd-hints {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .kbd-hint { display: flex; align-items: center; gap: 0.3rem; font-size: 0.68rem; color: #3a2a70; }
+    kbd {
+      background: #1a1440; border: 1px solid #2e2060;
+      border-radius: 4px; padding: 1px 5px;
+      font-size: 0.65rem; color: #6a5a9a; font-family: inherit;
+    }
+
+    .btn-row { display: flex; gap: 0.6rem; justify-content: center; }
+    button { padding: 0.45rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: opacity 0.15s, transform 0.1s; }
+    button:active { transform: scale(0.97); }
+    .btn-skip { background: #1e1640; color: #6a5a9a; border: 1px solid #2e2060; }
+    .btn-stop { background: #3f0d0d; color: #fca5a5; border: 1px solid #7f1d1d; }
+    .btn-skip:hover { background: #2a1e5a; }
+    .btn-stop:hover { background: #7f1d1d; }
+
+    /* Done panel */
+    .done-panel { display: none; flex-direction: column; align-items: center; gap: 0.75rem; text-align: center; }
+    .done-icon { font-size: 3rem; }
+    .done-title { font-size: 1.4rem; font-weight: 700; color: #4ade80; }
+    .done-sub { font-size: 0.82rem; color: #4a3a80; }
+    .btn-close { margin-top: 0.5rem; background: #16a34a; color: #dcfce7; padding: 0.5rem 1.5rem; }
   </style>
 </head>
 <body>
-  <div class="card">
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Fields</div>
+    <div id="stepsList"></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
     <div class="logo">👻 <span>GHOST</span></div>
-    <div class="subtitle">Profile Setup <span id="voiceBadge" style="color:#c084fc;font-size:0.75rem;margin-left:0.4rem;">+ Voice</span></div>
 
     <div class="progress-wrap">
-      <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      <div class="progress-bar" id="progressBar"></div>
     </div>
 
-    <div class="orb-wrap">
-      <div class="orb listening" id="orb">🎤</div>
+    <!-- Active panel -->
+    <div class="field-card" id="mainPanel">
+      <div class="orb" id="orb" title="Click to re-listen">🎤</div>
+
+      <div class="field-num"  id="fieldNum">1 / 29</div>
+      <div class="field-name" id="fieldName">—</div>
+      <div class="field-hint" id="fieldHint"></div>
+
+      <div class="status" id="status">Starting…</div>
+
+      <!-- Brave voice notice -->
+      <div class="brave-notice" id="braveNotice">
+        <button id="dismissBrave">✕</button>
+        <strong>🦁 Voice blocked by Brave</strong>
+        Brave blocks Google speech by default. To enable voice dictation:<br>
+        Go to <strong>brave://settings/privacy</strong> → turn on
+        <em>"Allow Google login for extensions"</em> or disable Shields for this page.
+        <br>You can still type your answers below.
+      </div>
+
+      <input class="text-input" id="textInput" type="text"
+             autocomplete="off" spellcheck="false" placeholder="Say or type your answer…" />
+
+      <div class="kbd-hints">
+        <span class="kbd-hint"><kbd>Enter</kbd>/<kbd>Tab</kbd> save & next</span>
+        <span class="kbd-hint"><kbd>⇧Tab</kbd> go back</span>
+        <span class="kbd-hint"><kbd>Esc</kbd> skip</span>
+        <span class="kbd-hint">Click 🎤 to re-listen</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-skip" id="skipBtn">Skip</button>
+        <button class="btn-stop" id="stopBtn">Stop &amp; Save</button>
+      </div>
     </div>
 
-    <div class="field-label" id="fieldLabel">Starting…</div>
-    <div class="field-name"  id="fieldName">—</div>
-
-    <div class="mic-meter" id="micMeter"><div class="mic-bar" id="micBar"></div></div>
-    <div class="mic-label" id="micLabel">Mic level — if bar doesn't move when you speak, check your mic</div>
-
-    <div class="status" id="status">Starting…</div>
-
-    <input  class="text-input"     id="textInput"  type="text" style="display:none" />
-    <button class="btn-text-submit" id="textSubmit" style="display:none">Next ↵</button>
-
-    <div class="btn-row" id="btnRow">
-      <button class="btn-skip" id="skipBtn">Skip field</button>
-      <button class="btn-stop" id="stopBtn">Stop</button>
+    <!-- Done panel -->
+    <div class="done-panel" id="donePanel">
+      <div class="done-icon">✅</div>
+      <div class="done-title">Profile updated!</div>
+      <div class="done-sub" id="savedCount"></div>
+      <div class="done-sub">Closing in 3 seconds…</div>
+      <button class="btn-close" id="closeBtn">Close now</button>
     </div>
+  </main>
 
-    <div class="steps" id="stepsList"></div>
-  </div>
-
-  <script src="dictation.js"></script>
+</div>
+<script src="dictation.js"></script>
 </body>
 </html>

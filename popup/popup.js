@@ -179,6 +179,43 @@ async function init() {
 
   renderProfileSelect();
   loadProfileIntoUI(activeId);
+
+  // Apply any pending dictation results written while popup was closed
+  await applyPendingDictation();
+}
+
+// ── Apply dictation results that were saved while popup was closed ─────────────
+async function applyPendingDictation() {
+  const d = await store.get('dictationResult');
+  if (!d.dictationResult) return;
+  const { results } = d.dictationResult;
+  if (!results) return;
+
+  const p = profiles[activeId];
+  if (!p) return;
+
+  for (const [key, { section, value }] of Object.entries(results)) {
+    if (p[section]) {
+      p[section][key] = value;
+      const el = document.querySelector(`[data-field="${key}"][data-section="${section}"]`);
+      if (el) el.value = value;
+      if (key === 'dob') {
+        const parsed = new Date(value);
+        if (!isNaN(parsed)) {
+          const iso = parsed.toISOString().split('T')[0];
+          if (el) el.value = iso;
+          p.personal.dob = iso;
+          const ageEl = $('ageInput');
+          if (ageEl) { ageEl.value = calcAge(iso); p.personal.age = ageEl.value; }
+        }
+      }
+    }
+  }
+
+  await saveCurrentProfile();
+  showToast('Dictation results applied ✓', 'success');
+  if ($('dictateStatus')) $('dictateStatus').textContent = '✓ Dictation applied';
+  await chrome.storage.local.remove('dictationResult');
 }
 
 // ── Profile CRUD ──────────────────────────────────────────────────────────────
