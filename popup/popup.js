@@ -266,6 +266,16 @@ function collectCurrentProfile() {
 }
 
 async function saveCurrentProfile() {
+  // Validate password === confirmPassword before saving
+  const pwdEl  = document.querySelector('[data-field="password"][data-section="credentials"]');
+  const cfmEl  = document.querySelector('[data-field="passwordConfirm"][data-section="credentials"]');
+  if (pwdEl && cfmEl && pwdEl.value && cfmEl.value && pwdEl.value !== cfmEl.value) {
+    showToast('Password and Confirm Password do not match', 'error');
+    cfmEl.focus();
+    cfmEl.style.borderColor = 'var(--error, #f87171)';
+    setTimeout(() => { cfmEl.style.borderColor = ''; }, 2500);
+    return; // block save
+  }
   collectCurrentProfile();
   await persistAll();
 }
@@ -954,17 +964,31 @@ function updatePinSettingsUI() {
   const label     = $('pinStatusLabel');
   const setBtn    = $('setPinBtn');
   const removeBtn = $('removePinBtn');
+  const lockBtn   = $('lockNowBtn');
   if (pinConfigured) {
     label.textContent = '🔒 Active';
     label.style.color = 'var(--success)';
     setBtn.classList.add('hidden');
     removeBtn.classList.remove('hidden');
+    if (lockBtn) lockBtn.classList.remove('hidden');
   } else {
     label.textContent = 'Not set';
     label.style.color = '';
     setBtn.classList.remove('hidden');
     removeBtn.classList.add('hidden');
+    if (lockBtn) lockBtn.classList.add('hidden');
   }
+}
+
+// Lock Now — clears session key cache so next popup open requires PIN again
+const _lockNowBtn = $('lockNowBtn');
+if (_lockNowBtn) {
+  _lockNowBtn.addEventListener('click', async () => {
+    await clearSessionCache();
+    sessionKey = null;
+    showToast('GHOST locked 🔒', 'success');
+    setTimeout(() => window.close(), 800);
+  });
 }
 
 $('setPinBtn').addEventListener('click', async () => {
