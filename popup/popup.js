@@ -126,7 +126,7 @@ async function loadTheme() {
 let profiles     = {}, activeId = null;
 let siteBindings = {};   // { hostname: profileId }
 let currentHost  = '';
-let settings = { highlight: true, autoSave: false, fillHidden: false, fillSelect: true };
+let settings = { highlight: true, autoSave: false, fillHidden: false, fillSelect: true, autoLockMs: 0 };
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -188,8 +188,14 @@ async function init() {
 async function applyPendingDictation() {
   const d = await store.get('dictationResult');
   if (!d.dictationResult) return;
-  const { results } = d.dictationResult;
+  const { results, profileId } = d.dictationResult;
   if (!results) return;
+
+  // DI-03: skip if dictation was recorded for a different profile
+  if (profileId && profileId !== activeId) {
+    console.warn('[GHOST] Dictation profileId mismatch — skipping to prevent cross-profile corruption');
+    return;
+  }
 
   const p = profiles[activeId];
   if (!p) return;
@@ -212,10 +218,15 @@ async function applyPendingDictation() {
     }
   }
 
-  await saveCurrentProfile();
-  showToast('Dictation results applied ✓', 'success');
-  if ($('dictateStatus')) $('dictateStatus').textContent = '✓ Dictation applied';
-  await chrome.storage.local.remove('dictationResult');
+  const saved = await saveCurrentProfile();
+  if (saved) {
+    showToast('Dictation results applied ✓', 'success');
+    if ($('dictateStatus')) $('dictateStatus').textContent = '✓ Dictation applied';
+    await chrome.storage.local.remove('dictationResult');
+  } else {
+    showToast('Dictation received — save failed', 'error');
+    if ($('dictateStatus')) $('dictateStatus').textContent = '⚠ Dictation save failed';
+  }
 }
 
 // ── Profile CRUD ──────────────────────────────────────────────────────────────
@@ -303,7 +314,7 @@ function collectCurrentProfile() {
 }
 
 async function saveCurrentProfile() {
-  // Validate password === confirmPassword before saving
+  // Validate password match — only when BOTH fields have values (BUG-06)
   const pwdEl  = document.querySelector('[data-field="password"][data-section="credentials"]');
   const cfmEl  = document.querySelector('[data-field="passwordConfirm"][data-section="credentials"]');
   if (pwdEl && cfmEl && pwdEl.value && cfmEl.value && pwdEl.value !== cfmEl.value) {
@@ -311,10 +322,11 @@ async function saveCurrentProfile() {
     cfmEl.focus();
     cfmEl.style.borderColor = 'var(--error, #f87171)';
     setTimeout(() => { cfmEl.style.borderColor = ''; }, 2500);
-    return; // block save
+    return false; // BUG-04: return bool so callers can check
   }
   collectCurrentProfile();
   await persistAll();
+  return true;
 }
 
 async function persistAll() {
@@ -741,12 +753,28 @@ async function cacheSessionKey(key) {
   } catch { /* storage.session unavailable (e.g. Firefox) — silent */ }
 }
 
+// Write the auto-lock expiry into session storage (0 = never).
+async function scheduleLockAt() {
+  const ms = settings.autoLockMs || 0;
+  if (ms <= 0) {
+    await chrome.storage.session.remove('ghostLockAt').catch(() => {});
+    return;
+  }
+  const lockAt = Date.now() + ms;
+  await chrome.storage.session.set({ ghostLockAt: lockAt }).catch(() => {});
+}
+
 // Attempt to restore sessionKey from chrome.storage.session cache.
 // Returns true if successful, false if cache miss or error.
 async function tryRestoreSessionKey() {
   try {
-    const d = await chrome.storage.session.get('ghostSessionKey');
+    const d = await chrome.storage.session.get(['ghostSessionKey', 'ghostLockAt']);
     if (!d.ghostSessionKey) return false;
+    // Auto-lock: if expiry is set and has passed, treat as cache miss
+    if (d.ghostLockAt && Date.now() >= d.ghostLockAt) {
+      await clearSessionCache();
+      return false;
+    }
     sessionKey = await crypto.subtle.importKey(
       'raw', ub64(d.ghostSessionKey), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']
     );
@@ -758,7 +786,7 @@ async function tryRestoreSessionKey() {
 
 // Wipe session cache — call when PIN is removed or changed.
 async function clearSessionCache() {
-  try { await chrome.storage.session.remove('ghostSessionKey'); } catch {}
+  try { await chrome.storage.session.remove(['ghostSessionKey', 'ghostLockAt']); } catch {}
 }
 
 const SENSITIVE_PRO_KEYS = [
@@ -773,7 +801,7 @@ async function derivePinKey(pin, salt) {
   );
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', salt, iterations: 600_000, hash: 'SHA-256' },
-    km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+    km, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
   );
 }
 
@@ -950,6 +978,7 @@ function runPinOverlay({ mode, pinData }) {
           pinConfigured  = true;
           await store.set({ pinHash, pinSalt: b64(hashSalt), pinKeySalt: b64(keySalt) });
           await cacheSessionKey(sessionKey); // persist across popup close/reopen
+          await scheduleLockAt();
           cleanup({ ok: true });
         } else {
           // unlock
@@ -962,6 +991,7 @@ function runPinOverlay({ mode, pinData }) {
           } else {
             sessionKey = await derivePinKey(pin, ub64(pinData.pinKeySalt));
             await cacheSessionKey(sessionKey); // persist across popup close/reopen
+            await scheduleLockAt();
             cleanup({ ok: true });
           }
         }
@@ -990,10 +1020,12 @@ async function initPinLock() {
   // PIN is configured. Try to restore session key from cache first.
   // If cache hit (same browser session, popup just closed/reopened) — no prompt needed.
   const restored = await tryRestoreSessionKey();
-  if (restored) return;
+  if (restored) { await scheduleLockAt(); return; }
 
   // Cache miss (browser restarted) — must prompt for PIN.
   await runPinOverlay({ mode: 'unlock', pinData: d });
+  // Re-arm timer after each successful unlock
+  if (sessionKey) await scheduleLockAt();
 }
 
 // ── PIN management from Settings ───────────────────────────────────────────────
@@ -1002,18 +1034,21 @@ function updatePinSettingsUI() {
   const setBtn    = $('setPinBtn');
   const removeBtn = $('removePinBtn');
   const lockBtn   = $('lockNowBtn');
+  const alRow     = $('autoLockRow');
   if (pinConfigured) {
     label.textContent = '🔒 Active';
     label.style.color = 'var(--success)';
     setBtn.classList.add('hidden');
     removeBtn.classList.remove('hidden');
     if (lockBtn) lockBtn.classList.remove('hidden');
+    if (alRow)  alRow.classList.remove('hidden');
   } else {
     label.textContent = 'Not set';
     label.style.color = '';
     setBtn.classList.remove('hidden');
     removeBtn.classList.add('hidden');
     if (lockBtn) lockBtn.classList.add('hidden');
+    if (alRow)  alRow.classList.add('hidden');
   }
 }
 
@@ -1073,6 +1108,9 @@ async function applySettings() {
   // pill toggle — stored separately so content script can read it independently
   const pd = await store.get(['pillEnabled']);
   settingPill.checked = pd.pillEnabled === true; // default false — user must opt in
+  // auto-lock dropdown
+  const alSel = $('autoLockSelect');
+  if (alSel) alSel.value = String(settings.autoLockMs || 0);
 }
 $('settingsBtn').addEventListener('click', () => $('settingsOverlay').classList.remove('hidden'));
 $('closeSettings').addEventListener('click', () => $('settingsOverlay').classList.add('hidden'));
@@ -1088,11 +1126,22 @@ $('closeSettings').addEventListener('click', () => $('settingsOverlay').classLis
 settingPill.addEventListener('change', async () => {
   await store.set({ pillEnabled: settingPill.checked });
 });
+const _alSel = $('autoLockSelect');
+if (_alSel) {
+  _alSel.addEventListener('change', async () => {
+    settings.autoLockMs = parseInt(_alSel.value, 10) || 0;
+    await store.set({ settings });
+    await scheduleLockAt(); // re-arm immediately with new interval
+  });
+}
 $('clearAllData').addEventListener('click', async () => {
-  if (!confirm('Clear ALL data?')) return;
+  if (!confirm('Clear ALL data? This cannot be undone.')) return;
+  sessionKey    = null;
+  pinConfigured = false;
+  await clearSessionCache();
   await chrome.storage.local.clear();
   await init();
-  showToast('Cleared');
+  showToast('All data cleared');
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -1200,8 +1249,14 @@ dictateBtn.addEventListener('click', async () => {
 // Listen for results written by the dictation tab
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !changes.dictationResult) return;
-  const { results } = changes.dictationResult.newValue || {};
+  const { results, profileId } = changes.dictationResult.newValue || {};
   if (!results) return;
+
+  // DI-03: skip if dictation was for a different profile
+  if (profileId && profileId !== activeId) {
+    console.warn('[GHOST] Dictation profileId mismatch in onChanged — ignoring');
+    return;
+  }
 
   const p = profiles[activeId];
   if (!p) return;
@@ -1227,12 +1282,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
     }
   }
 
-  saveCurrentProfile();
-  dictateStatus.textContent = '✓ Dictation applied — profile saved';
-  showToast('Dictation results applied ✓', 'success');
-
-  // Clear the result key so it doesn't re-apply on next popup open
-  chrome.storage.local.remove('dictationResult');
+  const saved = await saveCurrentProfile();
+  if (saved) {
+    dictateStatus.textContent = '✓ Dictation applied — profile saved';
+    showToast('Dictation results applied ✓', 'success');
+    await chrome.storage.local.remove('dictationResult'); // only delete after confirmed save
+  } else {
+    dictateStatus.textContent = '⚠ Dictation received — save failed (password mismatch?)';
+    showToast('Dictation received but save failed', 'error');
+  }
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

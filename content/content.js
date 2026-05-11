@@ -10,7 +10,7 @@
 // wasn't already present. Guard prevents duplicate pill elements + listeners.
 if (window.__ghostInjected) {
   // Already running — just respond to fill requests, don't re-init
-  throw new Error('GHOST: already injected, skipping re-init');
+  throw 'GHOST:already-injected'; // string throw — no stack trace, no DevTools noise
 }
 window.__ghostInjected = true;
 
@@ -371,11 +371,14 @@ function haystack(input) {
 }
 
 function matchesSignature(input, sig) {
-  if (sig.type && input.type === sig.type && ['password','email','tel','url'].includes(sig.type)) return true;
+  // password type is unambiguous — always match
+  if (sig.type === 'password' && input.type === 'password') return true;
+  // autocomplete attribute is authoritative when present
   if (sig.autocomplete) {
     const ac = input.getAttribute('autocomplete');
     if (ac && (ac === sig.autocomplete || ac.endsWith(sig.autocomplete))) return true;
   }
+  // pattern matching against label/name/id/placeholder haystack
   const h = haystack(input);
   return sig.patterns.some((p) => new RegExp(p, 'i').test(h));
 }
@@ -480,7 +483,6 @@ function fillSelects(profile, opts = {}) {
   let count = 0;
   document.querySelectorAll('select').forEach((sel) => {
     if (!isVisible(sel, opts.fillHidden)) return;
-    const h = haystack(sel);
     for (const [key, sig] of Object.entries(FIELD_MAP)) {
       if (!sig.selectValues) continue;
       if (!matchesSignature(sel, sig)) continue;

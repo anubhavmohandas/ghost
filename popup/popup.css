@@ -552,3 +552,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 .pin-settings-row > span:first-child { flex: 1; }
 .pin-status-label { color: var(--text-muted); font-size: 10px; }
+
+/* ── Auto-lock select ─────────────────────────────────────────────────────── */
+.autolock-select {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 3px 6px;
+  cursor: pointer;
+  outline: none;
+}
+.autolock-select:hover { border-color: var(--accent); }
+.autolock-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb,139,92,246),.18); }

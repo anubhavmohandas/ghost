@@ -289,7 +289,17 @@
           <span class="pin-status-label" id="pinStatusLabel">Not set</span>
           <button class="btn-small btn-ghost" id="setPinBtn">Set PIN</button>
           <button class="btn-small btn-danger-outline hidden" id="removePinBtn">Remove</button>
-          <button class="btn-small btn-ghost hidden" id="lockNowBtn">🔒 Lock</button>
+          <button class="btn-small btn-ghost hidden" id="lockNowBtn">🔒 Lock Now</button>
+        </div>
+        <div class="pin-settings-row hidden" id="autoLockRow">
+          <span>⏱ Auto-lock after</span>
+          <select id="autoLockSelect" class="autolock-select">
+            <option value="0">Never</option>
+            <option value="5000">5 seconds</option>
+            <option value="10000">10 seconds</option>
+            <option value="60000">1 minute</option>
+            <option value="300000">5 minutes</option>
+          </select>
         </div>
         <hr />
         <div class="danger-zone">

@@ -224,7 +224,7 @@ async function finish() {
   donePanel.style.display = 'flex';
   document.getElementById('savedCount').textContent =
     `${Object.keys(results).length} of ${FIELDS.length} fields saved`;
-  await chrome.storage.local.set({ dictationResult: { results, ts: Date.now() } });
+  await chrome.storage.local.set({ dictationResult: { results, profileId: activeProfileId, ts: Date.now() } });
   setTimeout(() => window.close(), 3000);
 }
 
@@ -264,9 +264,12 @@ document.getElementById('dismissTip')?.addEventListener('click', () => {
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────────
+let activeProfileId = null;
+
 async function init() {
   try {
     const d = await chrome.storage.local.get(['profiles', 'activeId']);
+    activeProfileId = d.activeId || null;
     existingProfile = d.profiles?.[d.activeId] || null;
   } catch {}
   showField();
