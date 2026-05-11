@@ -814,3 +814,122 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   color: #fff;
 }
 .irctc-fill-btn:hover { opacity: 0.88; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Light mode overrides  (activated when --is-light: 1 is set by theme)
+   Uses CSS @supports + custom property trick to scope overrides cleanly.
+══════════════════════════════════════════════════════════════════════════════ */
+
+/* When --is-light is 1, apply light-specific refinements */
+@supports (color: oklch(0 0 0)) { /* ensures modern browser — always true */ }
+
+/* Lighter scrollbar for light themes */
+:root:has(body[style*="--is-light: 1"]) ::-webkit-scrollbar-track,
+.app:has([style*="--is-light: 1"]) ::-webkit-scrollbar-track { background: var(--surface2); }
+
+/* The cleaner selector — we toggle a data-attr on body */
+body.light-mode ::-webkit-scrollbar-thumb { background: var(--border); }
+body.light-mode ::-webkit-scrollbar-track  { background: var(--surface2); }
+body.light-mode ::-webkit-scrollbar        { width: 5px; height: 5px; }
+
+body.light-mode .app {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+}
+body.light-mode input,
+body.light-mode select,
+body.light-mode textarea {
+  color-scheme: light;
+}
+body.light-mode input::placeholder { opacity: 0.45; }
+
+/* Settings overlay / modal panels — softer shadow in light */
+body.light-mode .settings-overlay { background: rgba(0,0,0,0.35); }
+body.light-mode .settings-panel   { box-shadow: 0 8px 32px rgba(0,0,0,0.14); }
+body.light-mode .pin-overlay      { background: rgba(0,0,0,0.35); }
+
+/* Tab active indicator — use highlight var */
+body.light-mode .tab.active {
+  color: var(--highlight);
+  border-bottom-color: var(--highlight);
+}
+
+/* Buttons — outline variant needs darker border in light */
+body.light-mode .btn-ghost {
+  border-color: var(--border);
+  color: var(--text);
+}
+body.light-mode .btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Section labels */
+body.light-mode .section-label { color: var(--text-muted); }
+
+/* Toast */
+body.light-mode .toast {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* Drive reminder bar */
+body.light-mode .drive-reminder {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+/* Tatkal timer in light */
+body.light-mode .tatkal-timer {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* Passenger cards in light */
+body.light-mode .passenger-card {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+/* Theme card active ring */
+body.light-mode .theme-card.active {
+  border-color: var(--highlight);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* Light theme badge in theme picker */
+.theme-card-badge--light {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  color: #1c1007;
+}
+
+/* ── Dark / Light mode toggle in theme picker ────────────────────────────── */
+.theme-mode-toggle {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+.theme-mode-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all .18s;
+  letter-spacing: 0.02em;
+}
+.theme-mode-btn.active {
+  background: linear-gradient(90deg, var(--grad-a), var(--grad-b));
+  color: #fff;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+.theme-mode-btn:not(.active):hover { color: var(--text); }

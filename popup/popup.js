@@ -86,6 +86,45 @@ const PRESET_THEMES = {
       '--accent-glow': 'rgba(251,146,60,0.2)', '--highlight': '#a855f7',
       '--grad-a': '#6d28d9', '--grad-b': '#fb923c',
       '--text': '#faf0ff', '--text-muted': '#7c5fc0',
+      '--is-light': '0',
+    },
+  },
+
+  // ── Light themes ────────────────────────────────────────────────────────────
+  'ghost-light': {
+    name: 'Ghost Light ☀️',
+    vars: {
+      '--bg': '#f4f0ff', '--surface': '#ffffff', '--surface2': '#ede6ff',
+      '--border': '#cdbfed', '--accent': '#FAAE7B', '--accent-hover': '#f09958',
+      '--accent-glow': 'rgba(250,174,123,0.25)', '--highlight': '#7c3aed',
+      '--grad-a': '#7c3aed', '--grad-b': '#FAAE7B',
+      '--text': '#170a38', '--text-muted': '#7457a8',
+      '--danger': '#dc2626', '--success': '#16a34a',
+      '--is-light': '1',
+    },
+  },
+  'warm-paper': {
+    name: 'Warm Paper 📜',
+    vars: {
+      '--bg': '#fdf8f0', '--surface': '#ffffff', '--surface2': '#f5ede0',
+      '--border': '#e2cfb4', '--accent': '#d97706', '--accent-hover': '#b45309',
+      '--accent-glow': 'rgba(217,119,6,0.18)', '--highlight': '#7c3aed',
+      '--grad-a': '#f59e0b', '--grad-b': '#ef4444',
+      '--text': '#1c1007', '--text-muted': '#78584a',
+      '--danger': '#dc2626', '--success': '#16a34a',
+      '--is-light': '1',
+    },
+  },
+  'arctic': {
+    name: 'Arctic Blue ❄️',
+    vars: {
+      '--bg': '#f0f6ff', '--surface': '#ffffff', '--surface2': '#dbeafe',
+      '--border': '#bfdbfe', '--accent': '#2563eb', '--accent-hover': '#1d4ed8',
+      '--accent-glow': 'rgba(37,99,235,0.18)', '--highlight': '#7c3aed',
+      '--grad-a': '#2563eb', '--grad-b': '#7c3aed',
+      '--text': '#0f172a', '--text-muted': '#4a6080',
+      '--danger': '#dc2626', '--success': '#16a34a',
+      '--is-light': '1',
     },
   },
 };
@@ -104,15 +143,19 @@ const CUSTOM_COLOR_FIELDS = [
 ];
 
 let activeThemeId = 'purple-amber';
+let themeMode = 'dark'; // 'dark' | 'light'
 
 function applyThemeVars(vars) {
   const root = document.documentElement;
   Object.entries(vars).forEach(([k, val]) => root.style.setProperty(k, val));
+  // Toggle light-mode class on body so CSS overrides activate
+  document.body.classList.toggle('light-mode', vars['--is-light'] === '1');
 }
 
 async function loadTheme() {
   const d = await store.get(['activeThemeId', 'customTheme']);
   activeThemeId = d.activeThemeId || 'purple-amber';
+  themeMode     = d.themeMode || (PRESET_THEMES[activeThemeId]?.vars['--is-light'] === '1' ? 'light' : 'dark');
   if (activeThemeId === 'custom' && d.customTheme) {
     applyThemeVars(d.customTheme);
   } else if (PRESET_THEMES[activeThemeId]) {
@@ -249,7 +292,7 @@ profileSelect.addEventListener('change', async () => {
   await store.set({ activeId });
 });
 
-$('addProfileBtn').addEventListener('click', async () => {
+$('addProfileBtn')?.addEventListener('click', async () => {
   const name = prompt('Profile name:', 'New Profile');
   if (!name) return;
   await saveCurrentProfile();
@@ -262,7 +305,7 @@ $('addProfileBtn').addEventListener('click', async () => {
   showToast('Profile created', 'success');
 });
 
-$('deleteProfileBtn').addEventListener('click', async () => {
+$('deleteProfileBtn')?.addEventListener('click', async () => {
   if (Object.keys(profiles).length <= 1) return showToast('Cannot delete only profile', 'error');
   if (!confirm(`Delete "${profiles[activeId].name}"?`)) return;
   delete profiles[activeId];
@@ -352,7 +395,7 @@ function updateBindBtn(bound) {
   }
 }
 
-$('bindBtn').addEventListener('click', async () => {
+$('bindBtn')?.addEventListener('click', async () => {
   if (!currentHost) return showToast('No site detected', 'error');
   if (siteBindings[currentHost] === activeId) {
     // unbind
@@ -371,8 +414,20 @@ $('bindBtn').addEventListener('click', async () => {
 // ── Themes Panel ──────────────────────────────────────────────────────────────
 function renderThemesPanel() {
   const grid = $('themePresetsGrid');
+  if (!grid) return;
   grid.innerHTML = '';
-  Object.entries(PRESET_THEMES).forEach(([id, theme]) => {
+
+  // Sync toggle buttons to current mode
+  $('modeDarkBtn')?.classList.toggle('active',  themeMode === 'dark');
+  $('modeLightBtn')?.classList.toggle('active', themeMode === 'light');
+
+  // Filter themes by mode
+  const isLight = (t) => t.vars['--is-light'] === '1';
+  const filtered = Object.entries(PRESET_THEMES).filter(([, t]) =>
+    themeMode === 'light' ? isLight(t) : !isLight(t)
+  );
+
+  filtered.forEach(([id, theme]) => {
     const v = theme.vars;
     const card = document.createElement('div');
     card.className = `theme-card${activeThemeId === id ? ' active' : ''}`;
@@ -400,12 +455,13 @@ function renderThemesPanel() {
       <div class="theme-card-label">
         <span>${escHtml(theme.name)}</span>
         ${id === 'purple-amber' ? '<span class="theme-card-badge">DEFAULT</span>' : ''}
+        ${['ghost-light','warm-paper','arctic'].includes(id) ? '<span class="theme-card-badge theme-card-badge--light">☀ LIGHT</span>' : ''}
       </div>
     `;
     card.addEventListener('click', async () => {
       activeThemeId = id;
       applyThemeVars(theme.vars);
-      await store.set({ activeThemeId });
+      await store.set({ activeThemeId, themeMode });
       document.querySelectorAll('.theme-card').forEach((c) => c.classList.remove('active'));
       card.classList.add('active');
       syncCustomBuilderToVars(theme.vars);
@@ -486,19 +542,45 @@ function collectCustomVars() {
   return vars;
 }
 
-$('themesBtn').addEventListener('click', () => {
+// ── Dark / Light mode toggle ────────────────────────────────────────────────
+function setThemeMode(mode) {
+  themeMode = mode;
+  // Auto-apply first theme of the new mode if current theme is wrong mode
+  const currentIsLight = PRESET_THEMES[activeThemeId]?.vars['--is-light'] === '1';
+  const needsSwitch = (mode === 'light' && !currentIsLight) || (mode === 'dark' && currentIsLight);
+  if (needsSwitch) {
+    // Pick first theme of that mode
+    const entry = Object.entries(PRESET_THEMES).find(([, t]) =>
+      mode === 'light' ? t.vars['--is-light'] === '1' : t.vars['--is-light'] !== '1'
+    );
+    if (entry) {
+      const [newId, newTheme] = entry;
+      activeThemeId = newId;
+      applyThemeVars(newTheme.vars);
+      store.set({ activeThemeId, themeMode });
+    }
+  } else {
+    store.set({ themeMode });
+  }
+  renderThemesPanel();
+}
+
+$('modeDarkBtn')?.addEventListener('click',  () => setThemeMode('dark'));
+$('modeLightBtn')?.addEventListener('click', () => setThemeMode('light'));
+
+$('themesBtn')?.addEventListener('click', () => {
   renderThemesPanel();
   $('themesOverlay').classList.remove('hidden');
 });
-$('closeThemes').addEventListener('click', () => $('themesOverlay').classList.add('hidden'));
+$('closeThemes')?.addEventListener('click', () => $('themesOverlay').classList.add('hidden'));
 
-$('applyCustomBtn').addEventListener('click', () => {
+$('applyCustomBtn')?.addEventListener('click', () => {
   const vars = collectCustomVars();
   applyThemeVars(vars);
   showToast('Custom theme applied', 'success');
 });
 
-$('saveCustomBtn').addEventListener('click', async () => {
+$('saveCustomBtn')?.addEventListener('click', async () => {
   const vars = collectCustomVars();
   applyThemeVars(vars);
   activeThemeId = 'custom';
@@ -507,7 +589,7 @@ $('saveCustomBtn').addEventListener('click', async () => {
   showToast('Custom theme saved ✓', 'success');
 });
 
-$('resetCustomBtn').addEventListener('click', () => {
+$('resetCustomBtn')?.addEventListener('click', () => {
   const base = PRESET_THEMES[activeThemeId === 'custom' ? 'purple-amber' : activeThemeId];
   if (base) {
     applyThemeVars(base.vars);
@@ -543,7 +625,7 @@ function collectCustomFields() {
   }).filter((f) => f.key);
 }
 
-$('addCustomField').addEventListener('click', () => appendCustomField());
+$('addCustomField')?.addEventListener('click', () => appendCustomField());
 
 // ── Payloads ──────────────────────────────────────────────────────────────────
 function renderPayloads(payloads) {
@@ -580,7 +662,7 @@ function collectPayloads() {
   })).filter((p) => p.name || p.body);
 }
 
-$('addPayload').addEventListener('click', () => appendPayload());
+$('addPayload')?.addEventListener('click', () => appendPayload());
 
 async function injectPayload(body) {
   try {
@@ -591,11 +673,11 @@ async function injectPayload(body) {
 }
 
 // ── Fill ──────────────────────────────────────────────────────────────────────
-$('fillAllBtn').addEventListener('click', async () => {
+$('fillAllBtn')?.addEventListener('click', async () => {
   await saveCurrentProfile();
   sendFill('FILL_ALL');
 });
-$('fillSmartBtn').addEventListener('click', async () => {
+$('fillSmartBtn')?.addEventListener('click', async () => {
   await saveCurrentProfile();
   sendFill('FILL_SMART');
 });
@@ -610,7 +692,7 @@ async function sendFill(type) {
 }
 
 // ── Preview detected fields ───────────────────────────────────────────────────
-$('previewBtn').addEventListener('click', async () => {
+$('previewBtn')?.addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const res = await chrome.tabs.sendMessage(tab.id, { type: 'PREVIEW_FIELDS', settings });
@@ -628,10 +710,10 @@ $('previewBtn').addEventListener('click', async () => {
     $('previewOverlay').classList.remove('hidden');
   } catch { showToast('Cannot read page fields', 'error'); }
 });
-$('closePreview').addEventListener('click', () => $('previewOverlay').classList.add('hidden'));
+$('closePreview')?.addEventListener('click', () => $('previewOverlay').classList.add('hidden'));
 
 // ── Save btn ──────────────────────────────────────────────────────────────────
-$('saveBtn').addEventListener('click', async () => {
+$('saveBtn')?.addEventListener('click', async () => {
   await saveCurrentProfile();
   showToast('Saved ✓', 'success');
 });
@@ -641,7 +723,7 @@ document.addEventListener('input', () => {
 });
 
 // ── Export (AES-GCM) ──────────────────────────────────────────────────────────
-$('exportBtn').addEventListener('click', async () => {
+$('exportBtn')?.addEventListener('click', async () => {
   await saveCurrentProfile();
   const passphrase = await showPassphraseModal(
     'Export Passphrase',
@@ -667,8 +749,8 @@ $('exportBtn').addEventListener('click', async () => {
 });
 
 // ── Import ────────────────────────────────────────────────────────────────────
-$('importBtn').addEventListener('click', () => $('importFile').click());
-$('importFile').addEventListener('change', async (e) => {
+$('importBtn')?.addEventListener('click', () => $('importFile').click());
+$('importFile')?.addEventListener('change', async (e) => {
   const file = e.target.files[0]; if (!file) return;
   $('importFile').value = '';
   let parsed;
@@ -894,9 +976,9 @@ function showPassphraseModal(title, subtitle, placeholder = 'Passphrase') {
     const onOk     = () => { cleanup(); resolve($('ppInput').value); };
     const onCancel = () => { cleanup(); resolve(null); };
 
-    $('ppConfirmBtn').addEventListener('click', onOk);
-    $('ppCancelBtn').addEventListener('click', onCancel);
-    $('ppInput').addEventListener('keydown', function handler(e) {
+    $('ppConfirmBtn')?.addEventListener('click', onOk);
+    $('ppCancelBtn')?.addEventListener('click', onCancel);
+    $('ppInput')?.addEventListener('keydown', function handler(e) {
       if (e.key === 'Enter')  { $('ppInput').removeEventListener('keydown', handler); onOk(); }
       if (e.key === 'Escape') { $('ppInput').removeEventListener('keydown', handler); onCancel(); }
     });
@@ -904,7 +986,7 @@ function showPassphraseModal(title, subtitle, placeholder = 'Passphrase') {
   });
 }
 
-$('ppToggleBtn').addEventListener('click', () => {
+$('ppToggleBtn')?.addEventListener('click', () => {
   const i = $('ppInput');
   const hide = i.type === 'password';
   i.type = hide ? 'text' : 'password';
@@ -1066,7 +1148,7 @@ if (_lockNowBtn) {
   });
 }
 
-$('setPinBtn').addEventListener('click', async () => {
+$('setPinBtn')?.addEventListener('click', async () => {
   $('settingsOverlay').classList.add('hidden');
   await clearSessionCache(); // clear any old cached key before setting new one
   const result = await runPinOverlay({ mode: 'set', pinData: null });
@@ -1078,7 +1160,7 @@ $('setPinBtn').addEventListener('click', async () => {
   $('settingsOverlay').classList.remove('hidden');
 });
 
-$('removePinBtn').addEventListener('click', async () => {
+$('removePinBtn')?.addEventListener('click', async () => {
   if (!pinConfigured) return;
   const pp = await showPassphraseModal(
     'Confirm current PIN',
@@ -1115,9 +1197,10 @@ async function applySettings() {
   const alSel = $('autoLockSelect');
   if (alSel) alSel.value = String(settings.autoLockMs || 0);
 }
-$('settingsBtn').addEventListener('click', () => $('settingsOverlay').classList.remove('hidden'));
-$('closeSettings').addEventListener('click', () => $('settingsOverlay').classList.add('hidden'));
+$('settingsBtn')?.addEventListener('click', () => $('settingsOverlay').classList.remove('hidden'));
+$('closeSettings')?.addEventListener('click', () => $('settingsOverlay').classList.add('hidden'));
 [settingHighlight, settingAutoSave, settingFillHidden, settingFillSelect].forEach((el) => {
+  if (!el) return;
   el.addEventListener('change', async () => {
     settings.highlight  = settingHighlight.checked;
     settings.autoSave   = settingAutoSave.checked;
@@ -1137,7 +1220,7 @@ if (_alSel) {
     await scheduleLockAt(); // re-arm immediately with new interval
   });
 }
-$('clearAllData').addEventListener('click', async () => {
+$('clearAllData')?.addEventListener('click', async () => {
   if (!confirm('Clear ALL data? This cannot be undone.')) return;
   sessionKey    = null;
   pinConfigured = false;
@@ -1158,7 +1241,7 @@ document.querySelectorAll('.tab').forEach((t) => {
 });
 
 // ── Password toggle ───────────────────────────────────────────────────────────
-$('togglePwd').addEventListener('click', () => {
+$('togglePwd')?.addEventListener('click', () => {
   const i = $('pwdInput');
   const hide = i.type === 'password';
   i.type = hide ? 'text' : 'password';
