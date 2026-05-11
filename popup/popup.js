@@ -683,12 +683,38 @@ $('fillSmartBtn')?.addEventListener('click', async () => {
 });
 
 async function sendFill(type) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) { showToast('No active tab', 'error'); return; }
+  const p = profiles[activeId];
+  const msg = { type, profile: p, settings };
+
+  // First attempt — content script may already be live
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const p = profiles[activeId];
-    const res = await chrome.tabs.sendMessage(tab.id, { type, profile: p, settings });
+    const res = await chrome.tabs.sendMessage(tab.id, msg);
     showToast(`${res?.count ?? '?'} field(s) filled ✓`, 'success');
-  } catch { showToast('Cannot fill this page', 'error'); }
+    return;
+  } catch (_) { /* not injected yet — fall through to inject */ }
+
+  // Inject content script then retry (handles Angular SPA nav unloading it)
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
+  } catch (injectErr) {
+    // String-throw guard means already injected — that's fine, continue
+    if (!String(injectErr).includes('already-injected')) {
+      showToast('Cannot fill this page', 'error');
+      return;
+    }
+  }
+
+  // Give Angular change detection a moment to settle after injection
+  await new Promise(r => setTimeout(r, 420));
+
+  try {
+    const res = await chrome.tabs.sendMessage(tab.id, msg);
+    showToast(`${res?.count ?? '?'} field(s) filled ✓`, 'success');
+  } catch {
+    showToast('Cannot fill this page', 'error');
+  }
 }
 
 // ── Preview detected fields ───────────────────────────────────────────────────
@@ -1759,26 +1785,35 @@ $('irctcSaveBtn')?.addEventListener('click', async () => {
 $('irctcFillBtn')?.addEventListener('click', async () => {
   collectJourneyFromUI();
   await saveIrctcData();
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) { showToast('No active tab', 'error'); return; }
+  const msg = { type: 'IRCTC_FILL', data: irctcData };
+
+  // First attempt
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return showToast('No active tab', 'error');
-    await chrome.tabs.sendMessage(tab.id, {
-      type: 'IRCTC_FILL',
-      data: irctcData,
-    });
+    await chrome.tabs.sendMessage(tab.id, msg);
+    showToast('Filling IRCTC form ⚡', 'success');
+    return;
+  } catch (_) { /* content script not live — inject first */ }
+
+  // Inject content script
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
+  } catch (injectErr) {
+    if (!String(injectErr).includes('already-injected')) {
+      showToast('Could not reach IRCTC tab', 'error');
+      return;
+    }
+  }
+
+  // Wait for Angular to settle then retry
+  await new Promise(r => setTimeout(r, 420));
+  try {
+    const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
+    await chrome.tabs.sendMessage(t.id, msg);
     showToast('Filling IRCTC form ⚡', 'success');
   } catch {
-    // Try injecting content script first
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
-      setTimeout(async () => {
-        const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
-        chrome.tabs.sendMessage(t.id, { type: 'IRCTC_FILL', data: irctcData }).catch(() => {});
-      }, 400);
-    } catch {
-      showToast('Could not reach IRCTC tab', 'error');
-    }
+    showToast('Could not reach IRCTC tab', 'error');
   }
 });
 

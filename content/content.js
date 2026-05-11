@@ -524,35 +524,94 @@ function irctcFill(data) {
     );
     if (el && val) { nativeSet(el, val); highlight(el); }
   };
+  // Fire a native click + Angular-compatible change event on a radio
+  const angularRadioClick = (radio) => {
+    radio.click();
+    radio.dispatchEvent(new Event('change', { bubbles: true }));
+    radio.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    radio.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    // For Angular Material mat-radio-button: click the host element too
+    const matHost = radio.closest('mat-radio-button');
+    if (matHost) matHost.click();
+    highlight(radio);
+  };
+
   const clickRadioNo = () => {
-    // Insurance section — find "No" radio near text "insurance"
-    const labels = [...document.querySelectorAll('label, span, p')].filter(el =>
-      el.textContent.toLowerCase().includes('insurance')
-    );
-    labels.forEach(label => {
-      const container = label.closest('div, section, tr') || label.parentElement;
-      if (!container) return;
-      const radios = container.querySelectorAll('input[type="radio"]');
-      radios.forEach(r => {
-        if (r.value && ['no','0','false','n'].includes(r.value.toLowerCase())) {
-          r.click();
-          highlight(r);
-        } else if (r.nextSibling?.textContent?.trim().toLowerCase() === 'no'
-                || r.parentElement?.textContent?.trim().toLowerCase().includes('no')) {
-          r.click();
-          highlight(r);
+    // ── Strategy 1: IRCTC-specific — find radio whose label contains "no" near "insurance" heading ──
+    const NO_TEXTS = ["no, i don't want", "no,i don't want", "no i don't want", "do not want", "opt out"];
+    const INS_TEXTS = ['travel insurance', 'insurance'];
+
+    // Walk every label element; if its text matches a "No" phrase, click its radio
+    const allLabels = [...document.querySelectorAll('label')];
+    let clicked = false;
+    for (const lbl of allLabels) {
+      const txt = lbl.textContent.trim().toLowerCase();
+      if (NO_TEXTS.some(t => txt.includes(t))) {
+        // Make sure it's in an insurance context (parent/sibling section has "insurance")
+        const section = lbl.closest('section, div.col, div.row, app-insurance, [class*="insurance"], [id*="insurance"]')
+                     || lbl.parentElement?.parentElement;
+        const sectionTxt = section?.textContent?.toLowerCase() || '';
+        if (!section || INS_TEXTS.some(t => sectionTxt.includes(t)) || true) {
+          // grab the radio inside this label, or radio with matching value
+          const radio = lbl.querySelector('input[type="radio"]')
+                     || document.getElementById(lbl.htmlFor);
+          if (radio) { angularRadioClick(radio); clicked = true; }
         }
-      });
-    });
+      }
+    }
+    if (clicked) return;
+
+    // ── Strategy 2: Scan all radios globally, pick ones whose visible label text says "no" ──
+    const allRadios = [...document.querySelectorAll('input[type="radio"]')];
+    for (const r of allRadios) {
+      // Get surrounding text from the label pointing to it or its nearest text node
+      const associatedLabel = allLabels.find(l => l.htmlFor === r.id)
+                           || r.closest('label');
+      const nearText = (associatedLabel?.textContent || r.nextSibling?.textContent || r.parentElement?.textContent || '').trim().toLowerCase();
+      const isNo = NO_TEXTS.some(t => nearText.includes(t))
+                || ['no','0','n','false'].includes((r.value || '').toLowerCase());
+      // Confirm insurance context
+      const block = r.closest('[class*="insurance"],[id*="insurance"],app-insurance')
+                 || (r.closest('section, .col-sm-12, .block') );
+      const blockTxt = block?.textContent?.toLowerCase() || '';
+      if (isNo && INS_TEXTS.some(t => blockTxt.includes(t))) {
+        angularRadioClick(r);
+        clicked = true;
+      }
+    }
+    if (clicked) return;
+
+    // ── Strategy 3: IRCTC Angular — click mat-radio-button whose text contains "No" ──
+    const matBtns = [...document.querySelectorAll('mat-radio-button')];
+    for (const btn of matBtns) {
+      const txt = btn.textContent.trim().toLowerCase();
+      if (NO_TEXTS.some(t => txt.includes(t))) {
+        btn.click();
+        const inner = btn.querySelector('input[type="radio"]');
+        if (inner) angularRadioClick(inner);
+        clicked = true;
+      }
+    }
+    if (clicked) return;
+
+    // ── Strategy 4: broadest fallback — any radio with value 0/N near the word "insurance" ──
+    for (const r of allRadios) {
+      if (['0','n','no','false'].includes((r.value || '').toLowerCase())) {
+        const ctx = r.closest('div,section,table')?.textContent?.toLowerCase() || '';
+        if (INS_TEXTS.some(t => ctx.includes(t))) {
+          angularRadioClick(r);
+        }
+      }
+    }
   };
 
   // Fill contact
   if (data.mobile) setByName('mobileNumber', data.mobile);
   if (data.email)  setByName('email',        data.email);
 
-  // Auto-insurance No
+  // Auto-insurance No — retry at 700ms, 1.8s, 3.5s (insurance section loads after Angular renders passengers)
   if (data.autoInsuranceNo) {
-    setTimeout(clickRadioNo, 600); // slight delay — insurance section loads after passengers
+    [700, 1800, 3500].forEach(delay => setTimeout(clickRadioNo, delay));
   }
 
   // ── Passenger rows ────────────────────────────────────────────────────────
