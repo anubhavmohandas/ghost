@@ -182,6 +182,9 @@ async function init() {
 
   // Apply any pending dictation results written while popup was closed
   await applyPendingDictation();
+
+  // Load IRCTC data (lazy UI init happens on tab click, but data loads now)
+  await loadIrctcData();
 }
 
 // ── Apply dictation results that were saved while popup was closed ─────────────
@@ -1292,6 +1295,435 @@ chrome.storage.onChanged.addListener((changes, area) => {
     showToast('Dictation received but save failed', 'error');
   }
 });
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// IRCTC / Train Tab
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Default IRCTC data structure ──────────────────────────────────────────────
+function emptyIrctcData() {
+  return {
+    journey: {
+      from: '', to: '', date: '',
+      trainType: 'sleeper',   // 'sleeper' | 'premium'
+      class: 'SL',
+      quota: 'GN',
+      trainNo: '', trainName: '',
+    },
+    passengers: [],
+    autoInsuranceNo: true,
+    mobile: '', email: '',
+  };
+}
+
+function emptyPassenger() {
+  return {
+    id: uid(),
+    name: '', age: '', gender: 'M',
+    berthPref: 'NP',
+    foodPref: 'VEG',
+    idType: 'AADHAR', idNumber: '',
+    passengerType: 'ADULT',
+    nationality: 'Indian',
+  };
+}
+
+let irctcData = emptyIrctcData();
+let irctcTrainType = 'sleeper'; // mirrors irctcData.journey.trainType for reactive UI
+let tatkalTimerInterval = null;
+
+// ── Persist / Load ─────────────────────────────────────────────────────────────
+async function saveIrctcData() {
+  await store.set({ irctcData });
+}
+async function loadIrctcData() {
+  const d = await store.get('irctcData');
+  if (d.irctcData) {
+    irctcData = { ...emptyIrctcData(), ...d.irctcData };
+    if (!Array.isArray(irctcData.passengers)) irctcData.passengers = [];
+  }
+}
+
+// ── Berth options by train type ───────────────────────────────────────────────
+function berthOptions(trainType) {
+  if (trainType === 'premium') {
+    return [
+      { value: 'WS', label: 'Window' },
+      { value: 'AS', label: 'Aisle' },
+      { value: 'NP', label: 'No Preference' },
+    ];
+  }
+  return [
+    { value: 'LB',  label: 'Lower' },
+    { value: 'MB',  label: 'Middle' },
+    { value: 'UB',  label: 'Upper' },
+    { value: 'SL',  label: 'Side Lower' },
+    { value: 'SU',  label: 'Side Upper' },
+    { value: 'NP',  label: 'No Preference' },
+  ];
+}
+
+function buildSelect(opts, selected, cls) {
+  return opts.map(o =>
+    `<option value="${o.value}"${o.value === selected ? ' selected' : ''}>${o.label}</option>`
+  ).join('');
+}
+
+// ── Render a single passenger card ───────────────────────────────────────────
+function renderPassengerCard(pax, idx, total) {
+  const berths  = berthOptions(irctcTrainType);
+  const showFood = irctcTrainType === 'premium';
+
+  const berthSel  = `<select class="pax-berth" data-paxid="${pax.id}">
+    ${buildSelect(berths, pax.berthPref)}
+  </select>`;
+
+  const foodSel = showFood ? `
+    <label class="irctc-label">Food Pref
+      <select class="pax-food" data-paxid="${pax.id}">
+        <option value="VEG"${pax.foodPref==='VEG'?' selected':''}>Veg</option>
+        <option value="NON_VEG"${pax.foodPref==='NON_VEG'?' selected':''}>Non-Veg</option>
+        <option value="JAIN"${pax.foodPref==='JAIN'?' selected':''}>Jain</option>
+        <option value="NO_FOOD"${pax.foodPref==='NO_FOOD'?' selected':''}>No Meal</option>
+      </select>
+    </label>` : '';
+
+  return `
+  <div class="passenger-card" data-paxid="${pax.id}">
+    <div class="passenger-card-header">
+      <span class="passenger-card-title">Passenger ${idx + 1}</span>
+      ${total > 1 ? `<button class="remove-pax-btn" data-paxid="${pax.id}" title="Remove">✕</button>` : ''}
+    </div>
+    <div class="irctc-grid" style="gap:5px">
+      <label class="irctc-label" style="grid-column:1/-1">Full Name
+        <input class="pax-name" data-paxid="${pax.id}" value="${escHtml(pax.name)}" placeholder="As on Aadhaar/ID" />
+      </label>
+      <label class="irctc-label">Age
+        <input class="pax-age" data-paxid="${pax.id}" type="number" min="1" max="125" value="${pax.age}" placeholder="25" />
+      </label>
+      <label class="irctc-label">Gender
+        <select class="pax-gender" data-paxid="${pax.id}">
+          <option value="M"${pax.gender==='M'?' selected':''}>Male</option>
+          <option value="F"${pax.gender==='F'?' selected':''}>Female</option>
+          <option value="T"${pax.gender==='T'?' selected':''}>Transgender</option>
+        </select>
+      </label>
+      <label class="irctc-label">Berth Pref${berthSel}</label>
+      <label class="irctc-label">Type
+        <select class="pax-type" data-paxid="${pax.id}">
+          <option value="ADULT"${pax.passengerType==='ADULT'?' selected':''}>Adult</option>
+          <option value="CHILD"${pax.passengerType==='CHILD'?' selected':''}>Child (5-11)</option>
+          <option value="SENIOR_M"${pax.passengerType==='SENIOR_M'?' selected':''}>Senior ♂</option>
+          <option value="SENIOR_F"${pax.passengerType==='SENIOR_F'?' selected':''}>Senior ♀</option>
+        </select>
+      </label>
+      ${foodSel}
+      <label class="irctc-label">ID Proof
+        <select class="pax-idtype" data-paxid="${pax.id}">
+          <option value="AADHAR"${pax.idType==='AADHAR'?' selected':''}>Aadhaar</option>
+          <option value="PAN"${pax.idType==='PAN'?' selected':''}>PAN</option>
+          <option value="PASSPORT"${pax.idType==='PASSPORT'?' selected':''}>Passport</option>
+          <option value="VOTER"${pax.idType==='VOTER'?' selected':''}>Voter ID</option>
+          <option value="DL"${pax.idType==='DL'?' selected':''}>Driving Licence</option>
+        </select>
+      </label>
+      <label class="irctc-label">ID Number
+        <input class="pax-idno" data-paxid="${pax.id}" value="${escHtml(pax.idNumber)}" placeholder="XXXX XXXX XXXX" />
+      </label>
+    </div>
+  </div>`;
+}
+
+// ── Render all passengers ─────────────────────────────────────────────────────
+function renderPassengers() {
+  const list = $('passengersList');
+  if (!list) return;
+  const paxes = irctcData.passengers;
+  list.innerHTML = paxes.length === 0
+    ? '<div style="font-size:10px;color:var(--text-muted);text-align:center;padding:8px">No passengers — add one below</div>'
+    : paxes.map((p, i) => renderPassengerCard(p, i, paxes.length)).join('');
+
+  // Wire up passenger field listeners
+  list.querySelectorAll('[data-paxid]').forEach(el => {
+    el.addEventListener('input',  () => syncPaxField(el));
+    el.addEventListener('change', () => syncPaxField(el));
+  });
+  list.querySelectorAll('.remove-pax-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      irctcData.passengers = irctcData.passengers.filter(p => p.id !== btn.dataset.paxid);
+      renderPassengers();
+      updateAddPaxBtn();
+    });
+  });
+}
+
+// ── Sync a passenger field back to irctcData ─────────────────────────────────
+function syncPaxField(el) {
+  const paxId = el.dataset.paxid;
+  const pax   = irctcData.passengers.find(p => p.id === paxId);
+  if (!pax) return;
+  if (el.classList.contains('pax-name'))   pax.name          = el.value;
+  if (el.classList.contains('pax-age'))    pax.age           = el.value;
+  if (el.classList.contains('pax-gender')) pax.gender        = el.value;
+  if (el.classList.contains('pax-berth'))  pax.berthPref     = el.value;
+  if (el.classList.contains('pax-food'))   pax.foodPref      = el.value;
+  if (el.classList.contains('pax-type'))   pax.passengerType = el.value;
+  if (el.classList.contains('pax-idtype')) pax.idType        = el.value;
+  if (el.classList.contains('pax-idno'))   pax.idNumber      = el.value;
+}
+
+function updateAddPaxBtn() {
+  const btn = $('addPaxBtn');
+  if (btn) btn.disabled = irctcData.passengers.length >= 6;
+}
+
+// ── Populate journey inputs from irctcData ────────────────────────────────────
+function populateJourneyUI() {
+  const j = irctcData.journey;
+  const set = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
+  set('irctc-from',      j.from);
+  set('irctc-to',        j.to);
+  set('irctc-date',      j.date);
+  set('irctc-quota',     j.quota);
+  set('irctc-class',     j.class);
+  set('irctc-train',     j.trainNo);
+  set('irctc-trainname', j.trainName);
+  set('irctc-mobile',    irctcData.mobile);
+  set('irctc-email',     irctcData.email);
+  const ins = $('irctcAutoInsurance');
+  if (ins) ins.checked = irctcData.autoInsuranceNo !== false;
+  setTrainType(j.trainType || 'sleeper', false);
+  updateQuotaUI(j.quota);
+}
+
+// ── Collect journey inputs into irctcData ─────────────────────────────────────
+function collectJourneyFromUI() {
+  const g = (id) => { const el = $(id); return el ? el.value.trim() : ''; };
+  irctcData.journey.from      = g('irctc-from').toUpperCase();
+  irctcData.journey.to        = g('irctc-to').toUpperCase();
+  irctcData.journey.date      = g('irctc-date');
+  irctcData.journey.quota     = g('irctc-quota');
+  irctcData.journey.class     = g('irctc-class');
+  irctcData.journey.trainNo   = g('irctc-train');
+  irctcData.journey.trainName = g('irctc-trainname');
+  irctcData.journey.trainType = irctcTrainType;
+  irctcData.mobile            = g('irctc-mobile');
+  irctcData.email             = g('irctc-email');
+  const ins = $('irctcAutoInsurance');
+  irctcData.autoInsuranceNo   = ins ? ins.checked : true;
+}
+
+// ── Train type toggle ─────────────────────────────────────────────────────────
+function setTrainType(type, reRender = true) {
+  irctcTrainType               = type;
+  irctcData.journey.trainType  = type;
+  const sleepBtn = $('trainTypeSleeper');
+  const premBtn  = $('trainTypePremium');
+  if (sleepBtn && premBtn) {
+    sleepBtn.classList.toggle('active', type === 'sleeper');
+    premBtn.classList.toggle('active',  type === 'premium');
+  }
+  if (reRender) renderPassengers();
+}
+
+$('trainTypeSleeper')?.addEventListener('click', () => setTrainType('sleeper'));
+$('trainTypePremium')?.addEventListener('click', () => setTrainType('premium'));
+
+// ── Add passenger ─────────────────────────────────────────────────────────────
+$('addPaxBtn')?.addEventListener('click', () => {
+  if (irctcData.passengers.length >= 6) return;
+  irctcData.passengers.push(emptyPassenger());
+  renderPassengers();
+  updateAddPaxBtn();
+});
+
+// ── Quota change → Aadhaar reminder + timer class badge ───────────────────────
+function updateQuotaUI(quota) {
+  const reminder = $('aadharReminder');
+  if (reminder) reminder.classList.toggle('hidden', quota !== 'TQ' && quota !== 'PT');
+  updateTimerBadge();
+}
+
+$('irctc-quota')?.addEventListener('change', (e) => {
+  updateQuotaUI(e.target.value);
+  restartTatkalTimer();
+});
+$('irctc-class')?.addEventListener('change', () => {
+  updateTimerBadge();
+  restartTatkalTimer();
+});
+$('irctc-date')?.addEventListener('change', () => restartTatkalTimer());
+
+// ── Tatkal countdown timer ────────────────────────────────────────────────────
+// AC classes open at 10:00 AM; Non-AC (SL, 2S) open at 11:00 AM
+// Booking opens 1 day before journey date
+const AC_CLASSES    = new Set(['1A','2A','3A','3E','CC','EC']);
+const NON_AC_CLASSES = new Set(['SL','2S']);
+
+function isAcClass(cls) { return AC_CLASSES.has(cls); }
+
+function tatkalOpenTime(journeyDate, cls) {
+  // Returns Date object for when Tatkal opens, or null if not determinable
+  if (!journeyDate) return null;
+  const jd   = new Date(journeyDate);
+  if (isNaN(jd)) return null;
+  const opens = new Date(jd);
+  opens.setDate(opens.getDate() - 1);
+  const hour  = isAcClass(cls) ? 10 : 11;
+  opens.setHours(hour, 0, 0, 0);
+  return opens;
+}
+
+function updateTimerBadge() {
+  const badge = $('tatkalClassBadge');
+  if (!badge) return;
+  const cls = ($('irctc-class')?.value) || 'SL';
+  if (isAcClass(cls)) {
+    badge.textContent = 'AC — 10:00 AM';
+  } else {
+    badge.textContent = 'Non-AC — 11:00 AM';
+  }
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return '00:00:00';
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return h > 0
+    ? `${pad(h)}:${pad(m)}:${pad(s)}`
+    : `${pad(m)}:${pad(s)}`;
+}
+
+function tickTatkalTimer() {
+  const cd     = $('tatkalCountdown');
+  const label  = $('tatkalOpensLabel');
+  if (!cd || !label) return;
+
+  const cls      = ($('irctc-class')?.value)   || irctcData.journey.class || 'SL';
+  const dateVal  = ($('irctc-date')?.value)    || irctcData.journey.date  || '';
+  const quota    = ($('irctc-quota')?.value)   || irctcData.journey.quota || 'GN';
+
+  // Only show meaningful timer for Tatkal/Premium Tatkal
+  if (quota !== 'TQ' && quota !== 'PT') {
+    cd.textContent    = '—';
+    cd.className      = 'tatkal-countdown';
+    label.textContent = 'Select Tatkal quota to see countdown';
+    return;
+  }
+
+  if (!dateVal) {
+    cd.textContent    = '--:--:--';
+    cd.className      = 'tatkal-countdown';
+    label.textContent = 'Set journey date to start countdown';
+    return;
+  }
+
+  const opensAt = tatkalOpenTime(dateVal, cls);
+  if (!opensAt) {
+    cd.textContent    = '--:--:--';
+    label.textContent = 'Invalid date';
+    return;
+  }
+
+  const now        = Date.now();
+  const remaining  = opensAt.getTime() - now;
+  const openDateStr = opensAt.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+  const openTimeStr = isAcClass(cls) ? '10:00 AM' : '11:00 AM';
+
+  if (remaining > 0) {
+    // More than 24h away → show days + time
+    const days = Math.floor(remaining / 86400000);
+    if (days >= 1) {
+      cd.textContent    = `${days}d ${formatCountdown(remaining % 86400000)}`;
+      label.textContent = `Opens ${openDateStr} at ${openTimeStr}`;
+      cd.className      = 'tatkal-countdown';
+    } else {
+      cd.textContent    = formatCountdown(remaining);
+      cd.className      = `tatkal-countdown${remaining < 300000 ? ' urgent' : ''}`; // red under 5 min
+      label.textContent = `Opens ${openDateStr} at ${openTimeStr} — Be ready!`;
+    }
+  } else if (remaining > -300000) {
+    // Within 5 minutes past open time — booking is LIVE
+    cd.textContent    = 'BOOK NOW 🚀';
+    cd.className      = 'tatkal-countdown ready';
+    label.textContent = `Tatkal window is OPEN — ${openTimeStr} on ${openDateStr}`;
+  } else {
+    // Past window
+    cd.textContent    = 'Window passed';
+    cd.className      = 'tatkal-countdown';
+    label.textContent = `Tatkal opened ${openDateStr} at ${openTimeStr}`;
+  }
+}
+
+function restartTatkalTimer() {
+  if (tatkalTimerInterval) clearInterval(tatkalTimerInterval);
+  tickTatkalTimer();
+  tatkalTimerInterval = setInterval(tickTatkalTimer, 1000);
+}
+
+// ── Save button ───────────────────────────────────────────────────────────────
+$('irctcSaveBtn')?.addEventListener('click', async () => {
+  collectJourneyFromUI();
+  await saveIrctcData();
+  showToast('IRCTC profile saved ✓', 'success');
+});
+
+// ── Fill button — sends IRCTC data to content script ─────────────────────────
+$('irctcFillBtn')?.addEventListener('click', async () => {
+  collectJourneyFromUI();
+  await saveIrctcData();
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return showToast('No active tab', 'error');
+    await chrome.tabs.sendMessage(tab.id, {
+      type: 'IRCTC_FILL',
+      data: irctcData,
+    });
+    showToast('Filling IRCTC form ⚡', 'success');
+  } catch {
+    // Try injecting content script first
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
+      setTimeout(async () => {
+        const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
+        chrome.tabs.sendMessage(t.id, { type: 'IRCTC_FILL', data: irctcData }).catch(() => {});
+      }, 400);
+    } catch {
+      showToast('Could not reach IRCTC tab', 'error');
+    }
+  }
+});
+
+// ── Init IRCTC tab ─────────────────────────────────────────────────────────────
+async function initIrctcTab() {
+  await loadIrctcData();
+  populateJourneyUI();
+  renderPassengers();
+  updateAddPaxBtn();
+  updateTimerBadge();
+  restartTatkalTimer();
+
+  // Pre-fill contact from active general profile if empty
+  if (!irctcData.mobile && profiles[activeId]?.contact?.phone) {
+    const el = $('irctc-mobile');
+    if (el) el.value = profiles[activeId].contact.phone;
+  }
+  if (!irctcData.email && profiles[activeId]?.contact?.email) {
+    const el = $('irctc-email');
+    if (el) el.value = profiles[activeId].contact.email;
+  }
+}
+
+// Hook into tab click to lazy-init
+document.querySelector('.tab[data-tab="irctc"]')?.addEventListener('click', () => {
+  initIrctcTab();
+});
+
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 init().catch(console.error);

@@ -68,6 +68,7 @@
     <button class="tab" data-tab="professional">Career</button>
     <button class="tab" data-tab="credentials">Login</button>
     <button class="tab" data-tab="custom">Custom</button>
+    <button class="tab irctc-tab" data-tab="irctc">🚂 Train</button>
   </div>
 
   <!-- Tab Content -->
@@ -84,7 +85,7 @@
         <label>Display / Nick<input type="text" data-field="displayName" data-section="personal" placeholder="johndoe" /></label>
         <label>Date of Birth<input type="date" data-field="dob" data-section="personal" id="dobInput" /></label>
         <label>Age<input type="number" data-field="age" data-section="personal" id="ageInput" placeholder="Auto" readonly style="opacity:0.7;cursor:not-allowed" /></label>
-        <label>Gender<input type="text" data-field="gender" data-section="personal" placeholder="Male / Female / Other" /></label>
+        <label>Gender<select data-field="gender" data-section="personal"><option value="">— Select —</option><option>Male</option><option>Female</option><option>Transgender</option><option>Prefer not to say</option></select></label>
       </div>
       <div class="section-label">Identity / Gov IDs</div>
       <div class="field-grid">
@@ -99,8 +100,8 @@
       </div>
       <div class="section-label">Health</div>
       <div class="field-grid">
-        <label>Blood Group<input type="text" data-field="bloodGroup" data-section="personal" placeholder="O+" /></label>
-        <label>Marital Status<input type="text" data-field="maritalStatus" data-section="personal" placeholder="Single" /></label>
+        <label>Blood Group<select data-field="bloodGroup" data-section="personal"><option value="">— Select —</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select></label>
+        <label>Marital Status<select data-field="maritalStatus" data-section="personal"><option value="">— Select —</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option><option>Separated</option></select></label>
         <label class="full">Allergies / Medical Notes<input type="text" data-field="medicalNotes" data-section="personal" placeholder="None" /></label>
       </div>
       <div class="section-label">Emergency Contact</div>
@@ -229,6 +230,92 @@
       </div>
       <div class="custom-fields-list" id="customFieldsList"></div>
     </div>
+
+
+    <!-- ── IRCTC / TRAIN TAB ── -->
+    <div class="tab-pane" id="tab-irctc">
+
+      <!-- Tatkal Countdown -->
+      <div class="tatkal-timer" id="tatkalTimerBox">
+        <div class="tatkal-timer-header">
+          <span>⏱ Tatkal Booking Opens In</span>
+          <span class="tatkal-timer-class-badge" id="tatkalClassBadge">AC — 10:00 AM</span>
+        </div>
+        <div class="tatkal-countdown" id="tatkalCountdown">--:--:--</div>
+        <div class="tatkal-opens-label" id="tatkalOpensLabel">Set journey date &amp; class to start countdown</div>
+      </div>
+
+      <!-- Aadhaar Reminder (shown when Tatkal quota selected) -->
+      <div class="aadhar-reminder hidden" id="aadharReminder">
+        <span class="aadhar-reminder-icon">⚠️</span>
+        <span>Tatkal booking requires your <strong>Aadhaar-verified</strong> IRCTC account. Verify at <em>irctc.co.in → My Profile → Aadhaar KYC</em> before booking opens.</span>
+      </div>
+
+      <!-- Journey Details -->
+      <div class="irctc-section-label">Journey</div>
+      <div class="irctc-grid">
+        <label class="irctc-label">From Station<input id="irctc-from" placeholder="NDLS / CSTM" /></label>
+        <label class="irctc-label">To Station<input id="irctc-to" placeholder="BCT / MAS" /></label>
+        <label class="irctc-label">Journey Date<input type="date" id="irctc-date" /></label>
+        <label class="irctc-label">Quota
+          <select id="irctc-quota">
+            <option value="GN">General</option>
+            <option value="TQ">Tatkal</option>
+            <option value="PT">Premium Tatkal</option>
+            <option value="LD">Ladies</option>
+            <option value="SS">Senior Citizen</option>
+            <option value="HP">Divyaang</option>
+          </select>
+        </label>
+      </div>
+      <div class="irctc-grid three" style="margin-top:5px">
+        <label class="irctc-label">Class
+          <select id="irctc-class">
+            <option value="SL">SL — Sleeper</option>
+            <option value="3A">3A — AC 3 Tier</option>
+            <option value="2A">2A — AC 2 Tier</option>
+            <option value="1A">1A — AC First</option>
+            <option value="3E">3E — AC 3 Economy</option>
+            <option value="CC">CC — AC Chair Car</option>
+            <option value="EC">EC — Exec Chair</option>
+            <option value="2S">2S — Second Sitting</option>
+          </select>
+        </label>
+        <label class="irctc-label">Train No. (opt)<input id="irctc-train" placeholder="12301" /></label>
+        <label class="irctc-label">Train Name (opt)<input id="irctc-trainname" placeholder="Rajdhani" /></label>
+      </div>
+
+      <!-- Train Type Toggle -->
+      <div class="irctc-section-label" style="margin-top:10px">Train Type</div>
+      <div class="train-type-toggle">
+        <button class="train-type-btn active" id="trainTypeSleeper">🛌 Sleeper / Ordinary</button>
+        <button class="train-type-btn" id="trainTypePremium">⚡ Premium (VB / Shatabdi / Tejas)</button>
+      </div>
+
+      <!-- Passengers -->
+      <div class="passengers-header">
+        <span class="passengers-title">Passengers</span>
+        <button class="add-pax-btn" id="addPaxBtn">+ Add Passenger</button>
+      </div>
+      <div id="passengersList"></div>
+
+      <!-- Auto-insurance + Contact -->
+      <div class="irctc-toggle-row">
+        <span>Auto-select <strong>No</strong> for travel insurance</span>
+        <input type="checkbox" id="irctcAutoInsurance" checked />
+      </div>
+      <div class="irctc-grid" style="margin-top:8px">
+        <label class="irctc-label">Contact Mobile<input id="irctc-mobile" type="tel" placeholder="9876543210" /></label>
+        <label class="irctc-label">Contact Email<input id="irctc-email" type="email" placeholder="you@email.com" /></label>
+      </div>
+
+      <!-- Actions -->
+      <div class="irctc-actions">
+        <button class="irctc-save-btn" id="irctcSaveBtn">💾 Save Profile</button>
+        <button class="irctc-fill-btn" id="irctcFillBtn">⚡ Fill IRCTC Form</button>
+      </div>
+
+    </div><!-- /tab-irctc -->
 
   </div><!-- /tab-content -->
 

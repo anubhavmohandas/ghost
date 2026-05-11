@@ -566,3 +566,251 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 .autolock-select:hover { border-color: var(--accent); }
 .autolock-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb,139,92,246),.18); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   IRCTC / Train Tab
+══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tatkal countdown banner ─────────────────────────────────────────────── */
+.tatkal-timer {
+  background: linear-gradient(135deg, var(--surface2), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tatkal-timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tatkal-timer-class-badge {
+  font-size: 9px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 600;
+}
+.tatkal-countdown {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.tatkal-countdown.urgent { color: #f87171; }
+.tatkal-countdown.ready  { color: #4ade80; animation: pulse-green 1s infinite; }
+@keyframes pulse-green { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.tatkal-opens-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.tatkal-fill-btn {
+  width: 100%;
+  padding: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(90deg, var(--grad-a), var(--grad-b));
+  color: #fff;
+  letter-spacing: 0.03em;
+  transition: opacity .15s;
+}
+.tatkal-fill-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.tatkal-fill-btn:not(:disabled):hover { opacity: 0.88; }
+
+/* ── Aadhaar reminder banner ─────────────────────────────────────────────── */
+.aadhar-reminder {
+  background: rgba(251,191,36,.12);
+  border: 1px solid rgba(251,191,36,.4);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 10px;
+  color: #fbbf24;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.aadhar-reminder.hidden { display: none !important; }
+.aadhar-reminder-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Journey section ─────────────────────────────────────────────────────── */
+.irctc-section-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 10px 0 5px;
+  font-weight: 600;
+}
+.irctc-section-label:first-child { margin-top: 0; }
+.irctc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.irctc-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+.irctc-grid.full  { grid-template-columns: 1fr; }
+.irctc-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.irctc-label input,
+.irctc-label select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  padding: 4px 7px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.irctc-label input:focus,
+.irctc-label select:focus { border-color: var(--accent); }
+.irctc-label input::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+/* ── Train type toggle ───────────────────────────────────────────────────── */
+.train-type-toggle {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.train-type-btn {
+  flex: 1;
+  padding: 5px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.train-type-btn.active {
+  background: linear-gradient(90deg, var(--grad-a), var(--grad-b));
+  color: #fff;
+}
+
+/* ── Passenger cards ─────────────────────────────────────────────────────── */
+.passengers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 5px;
+}
+.passengers-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.add-pax-btn {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all .15s;
+}
+.add-pax-btn:hover { background: var(--accent); color: #fff; }
+.add-pax-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.passenger-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.passenger-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+.passenger-card-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text);
+}
+.remove-pax-btn {
+  font-size: 11px;
+  background: none;
+  border: none;
+  color: var(--danger, #f87171);
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+.remove-pax-btn:hover { opacity: 1; background: rgba(248,113,113,.12); }
+
+/* ── Insurance row ───────────────────────────────────────────────────────── */
+.irctc-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+.irctc-toggle-row input[type="checkbox"] { width: 13px; height: 13px; accent-color: var(--accent); }
+
+/* ── IRCTC footer actions ─────────────────────────────────────────────────── */
+.irctc-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.irctc-actions button {
+  flex: 1;
+  padding: 6px;
+  font-size: 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all .15s;
+}
+.irctc-save-btn {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+.irctc-save-btn:hover { background: var(--accent); color: #fff; }
+.irctc-fill-btn {
+  background: linear-gradient(90deg, var(--grad-a), var(--grad-b));
+  border: none;
+  color: #fff;
+}
+.irctc-fill-btn:hover { opacity: 0.88; }

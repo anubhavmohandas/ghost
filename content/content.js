@@ -505,6 +505,85 @@ document.addEventListener('focusin', (e) => {
   if (['INPUT','TEXTAREA'].includes(e.target.tagName)) lastFocused = e.target;
 });
 
+
+// ── IRCTC Smart Fill ──────────────────────────────────────────────────────────
+// Targets IRCTC's specific field names/IDs for each passenger slot and journey.
+function irctcFill(data) {
+  if (!data) return;
+  const j = data.journey || {};
+
+  // ── Journey fields ────────────────────────────────────────────────────────
+  // IRCTC uses React-controlled inputs — nativeSet fires synthetic events
+  const setByName = (name, val) => {
+    const el = document.querySelector(`input[name="${name}"], input#${CSS.escape(name)}, select[name="${name}"]`);
+    if (el && val) { nativeSet(el, val); highlight(el); }
+  };
+  const setByPlaceholder = (ph, val) => {
+    const el = [...document.querySelectorAll('input')].find(i =>
+      i.placeholder && i.placeholder.toLowerCase().includes(ph.toLowerCase())
+    );
+    if (el && val) { nativeSet(el, val); highlight(el); }
+  };
+  const clickRadioNo = () => {
+    // Insurance section — find "No" radio near text "insurance"
+    const labels = [...document.querySelectorAll('label, span, p')].filter(el =>
+      el.textContent.toLowerCase().includes('insurance')
+    );
+    labels.forEach(label => {
+      const container = label.closest('div, section, tr') || label.parentElement;
+      if (!container) return;
+      const radios = container.querySelectorAll('input[type="radio"]');
+      radios.forEach(r => {
+        if (r.value && ['no','0','false','n'].includes(r.value.toLowerCase())) {
+          r.click();
+          highlight(r);
+        } else if (r.nextSibling?.textContent?.trim().toLowerCase() === 'no'
+                || r.parentElement?.textContent?.trim().toLowerCase().includes('no')) {
+          r.click();
+          highlight(r);
+        }
+      });
+    });
+  };
+
+  // Fill contact
+  if (data.mobile) setByName('mobileNumber', data.mobile);
+  if (data.email)  setByName('email',        data.email);
+
+  // Auto-insurance No
+  if (data.autoInsuranceNo) {
+    setTimeout(clickRadioNo, 600); // slight delay — insurance section loads after passengers
+  }
+
+  // ── Passenger rows ────────────────────────────────────────────────────────
+  // IRCTC passenger form rows are indexed (passengerName0, passengerName1 …)
+  (data.passengers || []).forEach((pax, i) => {
+    // Common IRCTC field name patterns
+    const fields = {
+      [`passengerName${i}`]        : pax.name,
+      [`passengerAge${i}`]         : pax.age,
+      [`passengerGender${i}`]      : pax.gender,        // M/F/T
+      [`passengerBerthChoice${i}`] : pax.berthPref,     // LB/MB/UB/SL/SU/NP/WS/AS
+      [`passengerFoodChoice${i}`]  : pax.foodPref,      // VEG/NON_VEG/JAIN/NO_FOOD
+      [`passengerIdCard${i}`]      : pax.idType,
+      [`passengerIdCardNumber${i}`]: pax.idNumber,
+      [`nationality${i}`]          : pax.nationality,
+    };
+    Object.entries(fields).forEach(([name, val]) => {
+      if (!val) return;
+      // Try by exact name/id
+      let el = document.querySelector(
+        `input[name="${name}"], select[name="${name}"], input#${CSS.escape(name)}, select#${CSS.escape(name)}`
+      );
+      // Fallback: look for ng-reflect-name (Angular) or formControlName
+      if (!el) el = document.querySelector(
+        `[ng-reflect-name="${name}"], [formcontrolname="${name}"]`
+      );
+      if (el) { nativeSet(el, val); highlight(el); }
+    });
+  });
+}
+
 chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
   const { type, profile, settings = {} } = msg;
   const doHighlight = settings.highlight !== false;
@@ -526,6 +605,11 @@ chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     sendResponse({ ok: true, count });
   }
 
+
+  else if (type === 'IRCTC_FILL') {
+    irctcFill(msg.data);
+    sendResponse({ ok: true });
+  }
   else if (type === 'INJECT_PAYLOAD') {
     const target = lastFocused || document.activeElement;
     if (target && ['INPUT','TEXTAREA'].includes(target.tagName)) {
