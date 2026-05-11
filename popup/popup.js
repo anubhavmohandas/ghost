@@ -1250,7 +1250,7 @@ dictateBtn.addEventListener('click', async () => {
 });
 
 // Listen for results written by the dictation tab
-chrome.storage.onChanged.addListener((changes, area) => {
+chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !changes.dictationResult) return;
   const { results, profileId } = changes.dictationResult.newValue || {};
   if (!results) return;
