@@ -1788,33 +1788,37 @@ $('irctcFillBtn')?.addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) { showToast('No active tab', 'error'); return; }
   const msg = { type: 'IRCTC_FILL', data: irctcData };
+  const tabId = tab.id;
 
-  // First attempt
+  // First attempt — content script may already be live
   try {
-    await chrome.tabs.sendMessage(tab.id, msg);
+    await chrome.tabs.sendMessage(tabId, msg);
     showToast('Filling IRCTC form ⚡', 'success');
     return;
-  } catch (_) { /* content script not live — inject first */ }
+  } catch (_) { /* not injected — fall through */ }
 
-  // Inject content script
+  // Inject content script (if already injected, content script throws 'GHOST:already-injected' — that's fine)
+  let injected = false;
   try {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
-  } catch (injectErr) {
-    if (!String(injectErr).includes('already-injected')) {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content/content.js'] });
+    injected = true;
+  } catch (e) {
+    if (String(e).includes('already-injected')) {
+      injected = true; // existing script is alive, retry the message
+    } else {
       showToast('Could not reach IRCTC tab', 'error');
       return;
     }
   }
 
-  // Wait for Angular to settle then retry
-  await new Promise(r => setTimeout(r, 420));
-  try {
-    const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
-    await chrome.tabs.sendMessage(t.id, msg);
-    showToast('Filling IRCTC form ⚡', 'success');
-  } catch {
-    showToast('Could not reach IRCTC tab', 'error');
-  }
+  if (!injected) return;
+
+  // Give Angular change detection a beat, then retry
+  await new Promise(r => setTimeout(r, 450));
+
+  // Fire-and-forget: fill runs regardless of whether the channel resolves cleanly
+  chrome.tabs.sendMessage(tabId, msg).catch(() => {});
+  showToast('Filling IRCTC form ⚡', 'success');
 });
 
 // ── Init IRCTC tab ─────────────────────────────────────────────────────────────
