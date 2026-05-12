@@ -660,15 +660,30 @@ function irctcFill(data) {
     highlight(el);
   };
 
-  // Pick the i-th <select> with a given formcontrolname (Angular FormArray positional)
+  // All visible selects — used for positional fallback when formcontrolname isn't queryable
+  const _allSelects = [...document.querySelectorAll('select')].filter(s => s.offsetParent !== null);
+  // IRCTC per-passenger column order: Gender(0) Nationality(1) Berth(2) Food(3) IDtype(4)
+  const FC_ORDER = ['passengerGender','passengerNationality','passengerBerthChoice','passengerFoodChoice','passengerIdCard'];
+
+  // Pick the i-th <select> with a given formcontrolname
   const selByFC = (fc, i) => {
-    // Try exact formcontrolname attribute first (works when Angular renders it to DOM)
-    const els = [...document.querySelectorAll(`select[formcontrolname="${fc}"]`)];
-    if (els[i]) return els[i];
-    // Fallback: case-insensitive partial match
-    const all = [...document.querySelectorAll('select[formcontrolname]')];
-    const matches = all.filter(el => (el.getAttribute('formcontrolname') || '').toLowerCase().includes(fc.toLowerCase()));
-    return matches[i] || null;
+    // 1. Exact formcontrolname attribute
+    const exact = [...document.querySelectorAll(`select[formcontrolname="${fc}"]`)];
+    if (exact[i]) return exact[i];
+    // 2. Case-insensitive partial attribute match (Angular may lowercase the attr)
+    const byAttr = [...document.querySelectorAll('select[formcontrolname]')]
+      .filter(el => (el.getAttribute('formcontrolname')||'').toLowerCase().includes(fc.replace('passenger','').toLowerCase()));
+    if (byAttr[i]) return byAttr[i];
+    // 3. Positional fallback — when Angular prod doesn't expose formcontrolname as queryable attr
+    //    Group selects by passenger: SELECTS_PER_PAX selects per passenger row
+    const paxCount = nameInputs.length || 1;
+    const perPax   = Math.round(_allSelects.length / paxCount);
+    const colIdx   = FC_ORDER.indexOf(fc);
+    if (colIdx >= 0 && perPax > 0) {
+      const rowSelects = _allSelects.slice(i * perPax, (i + 1) * perPax);
+      return rowSelects[colIdx] || null;
+    }
+    return null;
   };
 
   // ID-number inputs (p-autocomplete inner input, placeholder varies)
