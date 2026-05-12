@@ -640,97 +640,132 @@ function irctcFill(data) {
   const nameInputs  = [...document.querySelectorAll('input[placeholder="Name"],input[placeholder*="Passenger Name" i]')];
   const ageInputs   = [...document.querySelectorAll('input[placeholder="Age"],input[placeholder*="passenger age" i]')];
 
-  // ── Native <select> helper ───────────────────────────────────────────────
-  // IRCTC uses native <select formcontrolname="passengerGender"> etc.
-  // Angular's SelectControlValueAccessor listens to 'change' event.
-  // We must use HTMLSelectElement.prototype setter (not HTMLInputElement).
+  // ── Select helper (native Angular selects) ───────────────────────────────
   const setSelect = (el, val) => {
     if (!el || !val) return;
     const v = String(val).toLowerCase();
-    // Find the best-matching option by value or text
     const opts = [...el.options];
     const match = opts.find(o => o.value.toLowerCase() === v || o.text.toLowerCase() === v)
                || opts.find(o => o.value.toLowerCase().startsWith(v) || o.text.toLowerCase().startsWith(v))
                || opts.find(o => o.text.toLowerCase().includes(v));
     if (!match) return;
-    // Use the native HTMLSelectElement setter so Angular's change detection fires
-    const nativeSel = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
-    nativeSel.call(el, match.value);
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+    setter.call(el, match.value);
     el.dispatchEvent(new Event('change', { bubbles: true }));
     highlight(el);
   };
 
-  // All visible selects — used for positional fallback when formcontrolname isn't queryable
-  const _allSelects = [...document.querySelectorAll('select')].filter(s => s.offsetParent !== null);
-  // IRCTC per-passenger column order: Gender(0) Nationality(1) Berth(2) Food(3) IDtype(4)
-  const FC_ORDER = ['passengerGender','passengerNationality','passengerBerthChoice','passengerFoodChoice','passengerIdCard'];
-
-  // Pick the i-th <select> with a given formcontrolname
-  const selByFC = (fc, i) => {
-    // 1. Exact formcontrolname attribute
-    const exact = [...document.querySelectorAll(`select[formcontrolname="${fc}"]`)];
-    if (exact[i]) return exact[i];
-    // 2. Case-insensitive partial attribute match (Angular may lowercase the attr)
-    const byAttr = [...document.querySelectorAll('select[formcontrolname]')]
-      .filter(el => (el.getAttribute('formcontrolname')||'').toLowerCase().includes(fc.replace('passenger','').toLowerCase()));
-    if (byAttr[i]) return byAttr[i];
-    // 3. Positional fallback — when Angular prod doesn't expose formcontrolname as queryable attr
-    //    Group selects by passenger: SELECTS_PER_PAX selects per passenger row
-    const paxCount = nameInputs.length || 1;
-    const perPax   = Math.round(_allSelects.length / paxCount);
-    const colIdx   = FC_ORDER.indexOf(fc);
-    if (colIdx >= 0 && perPax > 0) {
-      const rowSelects = _allSelects.slice(i * perPax, (i + 1) * perPax);
-      return rowSelects[colIdx] || null;
-    }
-    return null;
+  // ── p-autocomplete fill: type value, wait for IRCTC dropdown, click match ──
+  // IRCTC uses forceSelection=true — we must select from the list, not free-type.
+  // If no match in list, fall back to typing + blur (will work for new passengers).
+  const primeAutoFill = (inputEl, val) => {
+    if (!inputEl || !val) return;
+    inputEl.focus();
+    nativeSet(inputEl, val);
+    // Wait for IRCTC's autocomplete panel to appear, then click matching option
+    let tries = 0;
+    const pick = setInterval(() => {
+      const panel = document.querySelector(
+        '.ui-autocomplete-panel .ui-autocomplete-items, .p-autocomplete-panel .p-autocomplete-items,' +
+        '.ui-autocomplete-panel ul, .p-autocomplete-panel ul'
+      );
+      const items = panel ? [...panel.querySelectorAll('li')] : [];
+      const v = val.toLowerCase();
+      const match = items.find(li => li.textContent.toLowerCase().includes(v));
+      if (match) {
+        clearInterval(pick);
+        match.click();
+        highlight(inputEl);
+        return;
+      }
+      if (++tries > 10) { // ~1s timeout — no list appeared, blur and accept typed value
+        clearInterval(pick);
+        inputEl.dispatchEvent(new Event('blur', { bubbles: true }));
+        highlight(inputEl);
+      }
+    }, 100);
   };
 
-  // ID-number inputs (p-autocomplete inner input, placeholder varies)
+  // ── Use app-passenger components as per-row containers ────────────────────
+  // Each <app-passenger> wraps one passenger row — far more reliable than
+  // global positional counting which breaks with extra selects on the page.
+  const paxRows = [...document.querySelectorAll('app-passenger')];
+
+  // Fallback if app-passenger not found: group by nameInputs count
+  const usePaxRows = paxRows.length > 0;
+
+  const getRowEl = (i) => usePaxRows ? paxRows[i] : document;
+
+  // Within a row element, find a select by formcontrolname or position
+  const rowSelect = (rowEl, fc, colIdx) => {
+    if (!rowEl) return null;
+    // Try formcontrolname attribute (Angular sometimes renders it, sometimes not)
+    const byFC = rowEl.querySelector(`select[formcontrolname="${fc}"]`);
+    if (byFC) return byFC;
+    // Positional within this row only — much safer than global positional
+    const rowSelects = [...rowEl.querySelectorAll('select')].filter(s => s.offsetParent !== null);
+    return rowSelects[colIdx] || null;
+  };
+
+  const GENDER_MAP = { M:'Male', F:'Female', T:'Transgender', Male:'Male', Female:'Female', Transgender:'Transgender' };
+  const BERTH_MAP  = { NP:'No Preference', LB:'Lower Berth', UB:'Upper Berth', MB:'Middle Berth',
+                       SL:'Side Lower', SU:'Side Upper', WS:'Window Seat', AS:'Aisle Seat' };
+  const FOOD_MAP   = { VEG:'Veg', NON_VEG:'Non Veg', JAIN:'Jain', NO_FOOD:'No Meal', None:'No Meal' };
+
+  // ID-number inputs
   const idNumInputs = [...document.querySelectorAll(
     'input[placeholder*="xxxx" i],input[placeholder*="ID No" i],input[placeholder*="Aadhaar" i],input[placeholder*="Passport" i],input[placeholder*="PAN" i]'
   )];
 
   (data.passengers || []).forEach((pax, i) => {
+    const rowEl  = getRowEl(i);
+    const delay  = i * 1200; // stagger passengers to avoid focus/blur conflicts
 
-    // ── Name (PrimeNG p-autocomplete inner input, targeted by placeholder) ─────
+    // ── Name: p-autocomplete — type and select from IRCTC dropdown ────────────
     const nameVal = irctcName(pax.name);
-    const nameEl  = nameInputs[i];
-    if (nameEl && nameVal) primeSet(nameEl, nameVal);
+    const nameEl  = usePaxRows
+      ? rowEl?.querySelector('input[placeholder="Name"],input[placeholder*="Passenger" i]')
+      : nameInputs[i];
+    if (nameEl && nameVal) setTimeout(() => primeAutoFill(nameEl, nameVal), delay);
 
     // ── Age ───────────────────────────────────────────────────────────────────
-    const ageEl = ageInputs[i];
-    if (ageEl && pax.age) { nativeSet(ageEl, String(pax.age)); highlight(ageEl); }
+    const ageEl = usePaxRows
+      ? rowEl?.querySelector('input[placeholder="Age"]')
+      : ageInputs[i];
+    if (ageEl && pax.age) setTimeout(() => { nativeSet(ageEl, String(pax.age)); highlight(ageEl); }, delay + 50);
 
-    // ── Gender ────────────────────────────────────────────────────────────────
-    // IRCTC option values: "Male" / "Female" / "Transgender"
-    const genderMap = { M:'Male', F:'Female', T:'Transgender', male:'Male', female:'Female' };
-    const gEl = selByFC('passengerGender', i);
-    if (gEl && pax.gender) setSelect(gEl, genderMap[pax.gender] || pax.gender);
+    // ── Gender (select, col 0 in passenger row) ───────────────────────────────
+    setTimeout(() => {
+      const gEl = rowSelect(rowEl, 'passengerGender', 0);
+      if (gEl && pax.gender) setSelect(gEl, GENDER_MAP[pax.gender] || pax.gender);
+    }, delay + 100);
 
-    // ── Berth preference ──────────────────────────────────────────────────────
-    // IRCTC values: "No Preference", "Lower Berth", "Upper Berth", "Middle Berth",
-    //               "Side Lower", "Side Upper", "Window Seat"
-    const berthMap = {
-      NP:'No Preference', LB:'Lower Berth', UB:'Upper Berth', MB:'Middle Berth',
-      SL:'Side Lower', SU:'Side Upper', WS:'Window Seat', AS:'Aisle Seat',
-    };
-    const bEl = selByFC('passengerBerthChoice', i) || selByFC('berthChoice', i) || selByFC('berth', i);
-    if (bEl && pax.berthPref) setSelect(bEl, berthMap[pax.berthPref] || pax.berthPref);
+    // ── Berth (select, col 2) ─────────────────────────────────────────────────
+    setTimeout(() => {
+      const bEl = rowSelect(rowEl, 'passengerBerthChoice', 2)
+               || rowSelect(rowEl, 'berthChoice', 2);
+      if (bEl && pax.berthPref) setSelect(bEl, BERTH_MAP[pax.berthPref] || pax.berthPref);
+    }, delay + 150);
 
-    // ── Food preference ───────────────────────────────────────────────────────
-    const foodMap = { VEG:'Veg', NON_VEG:'Non Veg', JAIN:'Jain', NO_FOOD:'No Meal', None:'No Meal' };
-    const fEl = selByFC('passengerFoodChoice', i) || selByFC('foodChoice', i) || selByFC('food', i);
-    if (fEl && pax.foodPref) setSelect(fEl, foodMap[pax.foodPref] || pax.foodPref);
+    // ── Food (select, col 3) ──────────────────────────────────────────────────
+    setTimeout(() => {
+      const fEl = rowSelect(rowEl, 'passengerFoodChoice', 3)
+               || rowSelect(rowEl, 'foodChoice', 3);
+      if (fEl && pax.foodPref) setSelect(fEl, FOOD_MAP[pax.foodPref] || pax.foodPref);
+    }, delay + 200);
 
-    // ── ID card type ──────────────────────────────────────────────────────────
-    // IRCTC option text: "Aadhaar Card", "Voter ID Card", "PAN Card", "Passport", etc.
-    const idTypeEl = selByFC('passengerIdCard', i) || selByFC('idCard', i) || selByFC('idType', i);
-    if (idTypeEl && pax.idType) setSelect(idTypeEl, pax.idType);
+    // ── ID type (select, col 4) ───────────────────────────────────────────────
+    setTimeout(() => {
+      const idEl = rowSelect(rowEl, 'passengerIdCard', 4)
+                || rowSelect(rowEl, 'idCard', 4);
+      if (idEl && pax.idType) setSelect(idEl, pax.idType);
+    }, delay + 250);
 
     // ── ID number ─────────────────────────────────────────────────────────────
-    const idNumEl = idNumInputs[i];
-    if (idNumEl && pax.idNumber) primeSet(idNumEl, pax.idNumber);
+    const idNumEl = usePaxRows
+      ? rowEl?.querySelector('input[placeholder*="xxxx" i],input[placeholder*="ID" i]')
+      : idNumInputs[i];
+    if (idNumEl && pax.idNumber) setTimeout(() => primeAutoFill(idNumEl, pax.idNumber), delay + 300);
   });
 }
 
