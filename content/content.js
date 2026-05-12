@@ -615,31 +615,72 @@ function irctcFill(data) {
   }
 
   // ── Passenger rows ────────────────────────────────────────────────────────
-  // IRCTC passenger form rows are indexed (passengerName0, passengerName1 …)
+  // IRCTC uses PrimeNG p-autocomplete for the name field.
+  // The inner <input> has NO name/id — only placeholder="Name" and maxlength="16".
+  // formcontrolname is on the <p-autocomplete> wrapper which is NOT queryable via
+  // querySelectorAll in Angular prod mode. We target by placeholder + position.
+
+  // Name limit: IRCTC caps at 16 chars
+  const irctcName = (n) => (n || '').slice(0, 16).trim();
+
+  // PrimeNG autocomplete needs blur + Escape after nativeSet so the dropdown
+  // closes and Angular's internal model gets the typed value.
+  const primeSet = (el, val) => {
+    el.focus();
+    nativeSet(el, val);
+    // Close any autocomplete dropdown that opens, then blur to commit
+    el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape', keyCode: 27 }));
+    el.dispatchEvent(new KeyboardEvent('keyup',   { bubbles: true, cancelable: true, key: 'Escape', keyCode: 27 }));
+    el.dispatchEvent(new Event('blur',  { bubbles: true }));
+    highlight(el);
+  };
+
+  // Collect all visible passenger-row inputs by placeholder
+  // Each passenger row has: [Name input, Age input] + selects for Gender/Berth/Food/ID
+  const nameInputs  = [...document.querySelectorAll('input[placeholder="Name"],input[placeholder*="Passenger Name" i]')];
+  const ageInputs   = [...document.querySelectorAll('input[placeholder="Age"],input[placeholder*="passenger age" i]')];
+
+  // Selects: IRCTC renders them positionally inside each passenger row
+  // Typical column order per row: Gender | Berth | Food | ID-type
+  // We grab all selects that are NOT hidden and group them by passenger index
+  const allSelects  = [...document.querySelectorAll('select')].filter(s => s.offsetParent !== null);
+
+  // Each passenger row has (typically) 4 selects: Gender, Berth, Food, ID-type
+  // This may vary — get the row count from nameInputs length
+  const SELECTS_PER_ROW = allSelects.length > 0
+    ? Math.floor(allSelects.length / Math.max(nameInputs.length, 1))
+    : 4;
+
+  // ID-number inputs: inside an autocomplete, placeholder="xxxx xxxx xxxx" or similar
+  const idNumInputs = [...document.querySelectorAll(
+    'input[placeholder*="xxxx" i],input[placeholder*="ID No" i],input[placeholder*="Aadhaar" i],input[placeholder*="Passport" i],input[placeholder*="PAN" i]'
+  )];
+
   (data.passengers || []).forEach((pax, i) => {
-    // Common IRCTC field name patterns
-    const fields = {
-      [`passengerName${i}`]        : pax.name,
-      [`passengerAge${i}`]         : pax.age,
-      [`passengerGender${i}`]      : pax.gender,        // M/F/T
-      [`passengerBerthChoice${i}`] : pax.berthPref,     // LB/MB/UB/SL/SU/NP/WS/AS
-      [`passengerFoodChoice${i}`]  : pax.foodPref,      // VEG/NON_VEG/JAIN/NO_FOOD
-      [`passengerIdCard${i}`]      : pax.idType,
-      [`passengerIdCardNumber${i}`]: pax.idNumber,
-      [`nationality${i}`]          : pax.nationality,
+
+    // ── Name (PrimeNG autocomplete inner input) ────────────────────────────────
+    const nameVal = irctcName(pax.name);
+    const nameEl  = nameInputs[i];
+    if (nameEl && nameVal) primeSet(nameEl, nameVal);
+
+    // ── Age ───────────────────────────────────────────────────────────────────
+    const ageEl = ageInputs[i];
+    if (ageEl && pax.age) { nativeSet(ageEl, String(pax.age)); highlight(ageEl); }
+
+    // ── Selects (Gender / Berth / Food / ID-type) — positional per row ────────
+    const rowSelects = allSelects.slice(i * SELECTS_PER_ROW, (i + 1) * SELECTS_PER_ROW);
+    const trySelect  = (idx, val) => {
+      const el = rowSelects[idx];
+      if (el && val) { nativeSet(el, val); highlight(el); }
     };
-    Object.entries(fields).forEach(([name, val]) => {
-      if (!val) return;
-      // Try by exact name/id
-      let el = document.querySelector(
-        `input[name="${name}"], select[name="${name}"], input#${CSS.escape(name)}, select#${CSS.escape(name)}`
-      );
-      // Fallback: look for ng-reflect-name (Angular) or formControlName
-      if (!el) el = document.querySelector(
-        `[ng-reflect-name="${name}"], [formcontrolname="${name}"]`
-      );
-      if (el) { nativeSet(el, val); highlight(el); }
-    });
+    trySelect(0, pax.gender);    // Gender
+    trySelect(1, pax.berthPref); // Berth preference
+    trySelect(2, pax.foodPref);  // Food preference
+    trySelect(3, pax.idType);    // ID card type
+
+    // ── ID number (autocomplete inner input) ──────────────────────────────────
+    const idNumEl = idNumInputs[i];
+    if (idNumEl && pax.idNumber) primeSet(idNumEl, pax.idNumber);
   });
 }
 
