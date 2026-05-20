@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GHOST — General Handler of Stored Templates</title>
+<meta name="description" content="A browser extension that silently fills any form. 79 field types. AES-GCM encrypted. For people who type their email one too many times." />
+<link rel="icon" href="frontend/icons/icon128.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="frontend/styles.css" />
+<link rel="stylesheet" href="frontend/styles-2.css" />
+<link rel="stylesheet" href="frontend/styles-3.css" />
+</head>
+<body data-theme="purple-amber" data-motion="high">
+
+<!-- ════ Atmosphere ════ -->
+<div class="atmosphere" aria-hidden="true">
+  <div class="grid"></div>
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+  <div class="orb orb-c"></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ════ Nav ════ -->
+<div class="nav-progress" id="navProgress"></div>
+<nav class="nav" aria-label="Primary">
+  <div class="nav-logo">
+    <span class="mark"><img src="frontend/icons/icon128.png" alt="" /></span>
+    <span class="word">GHOST</span>
+  </div>
+  <div class="nav-links">
+    <a href="#manifesto" data-link>Manifesto</a>
+    <a href="#pillars" data-link>Powers</a>
+    <a href="#fields" data-link>Fields</a>
+    <a href="#popup-section" data-link>Popup</a>
+    <a href="#security" data-link>Security</a>
+    <a href="#themes" data-link>Themes</a>
+  </div>
+  <a class="nav-cta" href="#install">Install →</a>
+</nav>
+
+<!-- ════ HERO ════ -->
+<section class="hero" data-screen-label="01 Hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <span class="eyebrow"><span class="dot"></span>v5.4.0 · Manifest V3 · Released 2026-05-08</span>
+
+      <h1 class="hero-wordmark"><span class="gh">GH</span><span class="ost">OST</span></h1>
+
+      <p class="hero-sub">
+        For people who type their email <span class="strike">one</span> seven hundred times.
+      </p>
+
+      <p class="hero-tagline">
+        <strong>General Handler of Stored Templates.</strong>
+        A browser extension that silently fills any form on the internet — job apps, KYC, government portals, checkout pages, the works.
+        Seventy-nine field types. One click. Zero typing.
+      </p>
+
+      <div class="hero-ctas">
+        <a class="btn primary" href="#install" style="font-size: 14px; font-weight: 700">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Install for Chrome
+        </a>
+        <a class="btn" href="https://github.com/anubhavmohandas/GHOST" target="_blank" rel="noopener">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.97.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.18 1.18.92-.26 1.91-.39 2.9-.39.99 0 1.98.13 2.9.39 2.21-1.49 3.18-1.18 3.18-1.18.63 1.58.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.69.41.36.78 1.05.78 2.12v3.14c0 .31.21.67.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5Z"/></svg>
+          Source on GitHub
+        </a>
+      </div>
+
+      <div class="hero-meta">
+        <span><span class="badge">79</span> field types</span>
+        <span><span class="badge">AES-GCM 256</span> at rest</span>
+        <span><span class="badge">PBKDF2 600k</span> iterations</span>
+        <span class="ok">● No telemetry</span>
+      </div>
+    </div>
+
+    <!-- ── Hero stage: form + ghost cursor + tiny popup ── -->
+    <div class="hero-stage">
+      <div class="hero-mini-popup" id="miniPopup">
+        <div class="h">▼ <strong>WORK</strong> profile</div>
+        <div class="row"><span class="k">firstName</span><span class="v">Anubhav</span></div>
+        <div class="row"><span class="k">email</span><span class="v">a@m.com</span></div>
+        <div class="row"><span class="k">github</span><span class="v">/anubhav…</span></div>
+        <div class="row"><span class="k">passport</span><span class="v">●●●●●●●●</span></div>
+      </div>
+
+      <div class="demo-form" id="demoForm">
+        <div class="demo-form-header">
+          <div>
+            <div class="demo-form-title">job application
+              <strong>Senior Engineer — boring corp.</strong>
+            </div>
+          </div>
+          <div class="demo-form-window-controls"><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="demo-fields">
+          <label>First name<input type="text" data-fill="Anubhav" data-msg="May I?" /></label>
+          <label>Last name<input type="text" data-fill="Mohandas" data-msg="and more." /></label>
+          <label class="full">Email<input type="email" data-fill="hello@anubhav.dev" data-msg="haunting…" /></label>
+          <label>Phone<input type="tel" data-fill="+91 98765 43210" data-msg="filling" /></label>
+          <label>Years of experience<input type="text" data-fill="5" data-msg="quick" /></label>
+          <label class="full">LinkedIn<input type="url" data-fill="linkedin.com/in/anubhavmohandas" data-msg="too easy" /></label>
+          <label class="full">Brief bio
+            <textarea rows="2" data-fill="Engineer who refuses to type the same thing twice. Builds tools that fill forms so you don't have to." data-msg="bored already"></textarea>
+          </label>
+        </div>
+
+        <div class="demo-actions">
+          <button class="haunt">👻 Haunt All</button>
+          <button class="smart">Smart Fill</button>
+        </div>
+
+        <div class="ghost-cursor" id="ghostCursor" data-msg="May I?">
+          <svg viewBox="0 0 40 40">
+            <path class="body" d="M20 4 C10 4 5 11 5 22 L5 33 L9 30 L12 33 L15 30 L18 33 L21 30 L24 33 L27 30 L31 33 L35 30 L35 22 C35 11 30 4 20 4 Z"/>
+            <circle class="eye" cx="15" cy="18" r="2.6"/>
+            <circle class="eye" cx="25" cy="18" r="2.6"/>
+          </svg>
+        </div>
+        <div class="hover-pill" id="hoverPill">👻 May I?</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ MANIFESTO ════ -->
+<section class="manifesto" id="manifesto" data-screen-label="02 Manifesto">
+  <div class="wrap">
+    <p class="quote">
+      Most autofill tools cover <span class="strike">name</span> and <span class="strike">email</span>.
+      <em>GHOST fills the other seventy-seven.</em>
+    </p>
+    <p class="attribution">— for the chronically, gloriously lazy</p>
+  </div>
+</section>
+
+<!-- ════ PILLARS ════ -->
+<section class="pillars" id="pillars" data-screen-label="03 Powers">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="kicker">/ powers</span>
+        <h2 class="h-section">Four ways<br/>to <em>haunt</em><br/>a form.</h2>
+      </div>
+      <p class="lede">
+        Click once, fill everything. Or only the empties. Or just <em>hover</em> a single field and let the ghost ask politely. Or skip the form entirely and inject your test payload into whatever field is focused. It's your form. It's your call.
+      </p>
+    </div>
+
+    <div class="pillars-grid">
+      <div class="pillar-card">
+        <div class="num">P / 01</div>
+        <div class="name">Haunt All.</div>
+        <p class="desc">One click. Every detected field. Filled instantly across name, address, KYC, banking, social, login — the whole form, before your coffee gets cold.</p>
+        <div class="glyph">⚡</div>
+      </div>
+      <div class="pillar-card">
+        <div class="num">P / 02</div>
+        <div class="name">Smart Fill.</div>
+        <p class="desc">Polite mode. Fills only the empty fields and leaves whatever you've already typed alone. Perfect for the half-finished forms life keeps giving you.</p>
+        <div class="glyph">◐</div>
+      </div>
+      <div class="pillar-card">
+        <div class="num">P / 03</div>
+        <div class="name">Hover Pill.</div>
+        <p class="desc">Hover any input. A little ghost appears: <em>"May I?"</em> Click yes. Field filled. When the field has no match, it pouts. We've all been there.</p>
+        <div class="glyph">👻</div>
+      </div>
+      <div class="pillar-card">
+        <div class="num">P / 04</div>
+        <div class="name">Payloads.</div>
+        <p class="desc">For the security crowd. Save named test strings and inject them into the focused field with one tap. CTF, bug bounty, repeat input — your kind of evening.</p>
+        <div class="glyph">⚡</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ FIELDS marquee ════ -->
+<section class="fields" id="fields" data-screen-label="04 Fields">
+  <div class="wrap">
+    <div class="fields-headline">
+      <span class="kicker">/ coverage</span>
+      <div class="count">79.</div>
+      <p class="caption">field types <em>recognized</em> automatically.</p>
+    </div>
+  </div>
+
+  <div class="marquee">
+    <div class="marquee-track" id="marqueeA"></div>
+  </div>
+  <div class="marquee reverse">
+    <div class="marquee-track" id="marqueeB"></div>
+  </div>
+  <div class="marquee">
+    <div class="marquee-track" id="marqueeC"></div>
+  </div>
+
+  <div class="wrap" style="margin-top: 60px; text-align: center;">
+    <p class="lede" style="margin: 0 auto;">
+      Matched by <strong>name</strong>, <strong>id</strong>, <strong>autocomplete</strong>, <strong>placeholder</strong>, label text, <code>aria-label</code>, and wrapping <code>label[for]</code>. The hover pill only shows on fields actually inside the viewport. Yes, we thought about that.
+    </p>
+  </div>
+</section>
+
+<!-- ════ Floating popup ════ -->
+<section class="popup-section" id="popup-section" data-screen-label="05 The Popup">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="kicker">/ the popup</span>
+        <h2 class="h-section">The whole thing<br/>fits inside <em>380px</em>.</h2>
+      </div>
+      <p class="lede">
+        Drag it. Throw it across the screen. The popup is small, dense, and ruthless about hierarchy: <strong>profile switcher</strong>, fill buttons, four tabbed sections, payload injector, and an export button — packed into the corner of your browser, ready to ruin a form.
+      </p>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="popup-stage" id="popupStage">
+      <div class="stage-grid"></div>
+
+      <div class="callout tl">
+        <strong>Profile bar</strong>
+        Multiple profiles. Work, personal, testing. Switch instantly. Auto-binds per site.
+      </div>
+      <div class="callout tr">
+        <strong>Fill zone</strong>
+        Haunt All · Smart Fill · 👁 Preview detected fields before committing.
+      </div>
+      <div class="callout bl">
+        <strong>Tabs</strong>
+        Identity · Contact · Career · Login · Custom selectors · Payloads
+      </div>
+      <div class="callout br">
+        <strong>Footer</strong>
+        AES-encrypted export · Import · Theme picker · Settings.
+      </div>
+
+      <!-- The actual popup recreation -->
+      <div class="popup-card" id="popupCard">
+        <div class="pc-header">
+          <div class="pc-logo">
+            <span class="gw">👻 GHOST</span>
+            <span class="sub">General Handler of Stored Templates</span>
+          </div>
+          <div class="pc-icons"><span>🎨</span><span>⚙</span></div>
+        </div>
+        <div class="pc-site">
+          <span>jobs.boringcorp.com</span>
+          <span class="bound">🔗 Bound ✓</span>
+        </div>
+        <div class="pc-profile">
+          <select>
+            <option>▾ Work Profile</option>
+            <option>▾ Personal</option>
+            <option>▾ Pentest</option>
+          </select>
+          <button class="ib">+</button>
+          <button class="ib">✕</button>
+        </div>
+        <div class="pc-fill">
+          <button class="haunt">👻 Haunt All</button>
+          <button class="smart">Smart</button>
+          <button class="prev">👁</button>
+        </div>
+        <div class="pc-tabs">
+          <button class="t active">🪪 Identity</button>
+          <button class="t">📞 Contact</button>
+          <button class="t">💼 Career</button>
+          <button class="t">🔐 Login</button>
+          <button class="t">🛠 Custom</button>
+        </div>
+        <div class="pc-body">
+          <div class="pc-section-label">— Names —</div>
+          <div class="pc-field"><label>First</label><input value="Anubhav" /></div>
+          <div class="pc-field"><label>Last</label><input value="Mohandas" /></div>
+          <div class="pc-field full"><label>Display name</label><input value="anubhav.dev" /></div>
+          <div class="pc-section-label">— ID —</div>
+          <div class="pc-field"><label>DOB</label><input value="1998-04-12" /></div>
+          <div class="pc-field"><label>Nationality</label><input value="Indian" /></div>
+          <div class="pc-field"><label>Passport</label><input value="●●●●●●●●" /></div>
+          <div class="pc-field"><label>PAN</label><input value="●●●●●●●●●●" /></div>
+        </div>
+        <div class="pc-footer">
+          <button>📤 Export</button>
+          <button>📥 Import</button>
+          <button>💾 Save</button>
+        </div>
+      </div>
+
+      <div class="hint">
+        Drag the popup. Press <span class="key">R</span> to reset.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SECURITY ════ -->
+<section class="security" id="security" data-screen-label="06 Security">
+  <div class="wrap">
+    <div class="security-grid">
+      <div class="security-copy">
+        <span class="kicker">/ security</span>
+        <h2 class="h-section">It stays<br/><em>on your device.</em></h2>
+        <p>
+          GHOST is the rare productivity tool that doesn't phone home. Zero analytics. Zero external requests. Everything lives in <code style="font-family:var(--mono); color:var(--accent);">chrome.storage.local</code>, optionally encrypted with a PIN, optionally exported with a passphrase.
+        </p>
+        <p>
+          The v5.4 release added at-rest encryption with two-key architecture, the kind of thing security auditors like to see.
+        </p>
+        <div class="badge-row">
+          <span class="sec-badge"><span class="d"></span>Zero telemetry</span>
+          <span class="sec-badge"><span class="d"></span>Local only</span>
+          <span class="sec-badge"><span class="d"></span>Open source</span>
+        </div>
+      </div>
+
+      <div class="sec-cards">
+        <div class="sec-card">
+          <div class="num">SEC / 01</div>
+          <h3>PIN-Lock & at-rest encryption.</h3>
+          <p class="body">Two PBKDF2 derivations from your PIN — one verification hash (stored), one AES-GCM key (held in popup memory only, cleared on close). Sensitive fields — credentials, cards, bank, GSTIN — encrypted before they touch disk.</p>
+          <div class="specs">
+            <div class="spec"><strong>600k</strong>PBKDF2 iterations · SHA-256</div>
+            <div class="spec"><strong>32 byte</strong>random salt</div>
+            <div class="spec"><strong>AES-GCM 256</strong>field encryption</div>
+          </div>
+        </div>
+
+        <div class="sec-card">
+          <div class="num">SEC / 02</div>
+          <h3>Export passphrase.</h3>
+          <p class="body">Backups are AES-GCM 256-bit encrypted with a PBKDF2-derived key. Same 600k iterations. Same 32-byte salt. No <code>window.prompt()</code> — a real inline modal with show/hide. Or skip the passphrase and get plain JSON, your call.</p>
+        </div>
+
+        <div class="sec-card">
+          <div class="num">SEC / 03</div>
+          <h3>Message-sender verification.</h3>
+          <p class="body">The background service worker checks <code>sender.id === chrome.runtime.id</code> on every incoming message. External scripts pretending to be the extension get nothing. Hover-pill rect-guards prevent layout-ghost off-screen draws.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ THEMES ════ -->
+<section class="themes" id="themes" data-screen-label="07 Themes">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="kicker">/ themes</span>
+        <h2 class="h-section">Pick a haunt.<br/><em>Re-skin everything.</em></h2>
+      </div>
+      <p class="lede">
+        Four built-in themes. Click any swatch and the entire page — header, gradients, orbs, buttons, popup, the works — shifts in real time. The custom-builder inside the extension lets you go further with ten live color pickers. We won't judge your taste.
+      </p>
+    </div>
+
+    <div class="themes-row" id="themesRow"></div>
+  </div>
+</section>
+
+<!-- ════ INSTALL ════ -->
+<section class="install" id="install" data-screen-label="08 Install">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="kicker">/ install</span>
+        <h2 class="h-section">Five browsers.<br/>One <em>extension</em>.</h2>
+      </div>
+      <p class="lede">
+        Manifest V3 for Chrome, Edge, and Brave. A signed MV2 build for Firefox. A short Xcode dance for Safari. Then it's <code style="font-family:var(--mono); color:var(--accent);">Cmd+Shift+F</code> from anywhere. Tag a release, GitHub Actions ships all three zips. Run <code style="font-family:var(--mono); color:var(--accent);">update.sh</code> to keep current.
+      </p>
+    </div>
+
+    <div class="install-grid">
+      <a class="browser" href="https://github.com/anubhavmohandas/GHOST#chrome--edge--brave-manifest-v3" target="_blank" rel="noopener">
+        <div class="logo">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+            <circle cx="24" cy="24" r="8" fill="currentColor"/>
+            <path d="M24 2 L40 18 H16 Z M40 30 L24 46 L20 30 Z M8 30 L4 18 H20 Z" fill="currentColor" opacity="0.6"/>
+          </svg>
+        </div>
+        <div class="nm">Chrome</div>
+        <div class="sub">Manifest V3</div>
+        <div class="arrow">→</div>
+      </a>
+      <a class="browser" href="https://github.com/anubhavmohandas/GHOST#firefox" target="_blank" rel="noopener">
+        <div class="logo">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+            <path d="M24 8 C 14 8 8 16 8 26 C 8 36 16 42 24 42 C 32 42 40 36 40 26 C 40 18 34 14 28 16 C 24 14 20 14 18 18 C 18 22 20 22 22 22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="32" cy="22" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="nm">Firefox</div>
+        <div class="sub">Temporary · MV2</div>
+        <div class="arrow">→</div>
+      </a>
+      <a class="browser" href="https://github.com/anubhavmohandas/GHOST#chrome--edge--brave-manifest-v3" target="_blank" rel="noopener">
+        <div class="logo">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+            <path d="M14 30 C 14 18 22 12 30 14 C 38 16 40 28 32 32 C 28 34 22 32 18 36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="34" cy="16" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="nm">Edge</div>
+        <div class="sub">Chromium · MV3</div>
+        <div class="arrow">→</div>
+      </a>
+      <a class="browser" href="https://github.com/anubhavmohandas/GHOST#chrome--edge--brave-manifest-v3" target="_blank" rel="noopener">
+        <div class="logo">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M24 6 L40 14 L36 36 L24 42 L12 36 L8 14 Z" stroke="currentColor" stroke-width="2" fill="none"/>
+            <path d="M16 18 L24 24 L32 18 M24 24 L24 36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="nm">Brave</div>
+        <div class="sub">Chromium · MV3</div>
+        <div class="arrow">→</div>
+      </a>
+      <a class="browser" href="https://github.com/anubhavmohandas/GHOST#safari" target="_blank" rel="noopener">
+        <div class="logo">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+            <circle cx="24" cy="24" r="18" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+            <path d="M24 24 L32 16 L28 28 L24 24 L16 32 L20 20 Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="nm">Safari</div>
+        <div class="sub">via Xcode</div>
+        <div class="arrow">→</div>
+      </a>
+    </div>
+
+    <div class="install-quickstart">
+      <div class="qs-tabs">
+        <button class="qs-tab active" data-os="mac">macOS / Linux</button>
+        <button class="qs-tab" data-os="win">Windows</button>
+      </div>
+      <div class="qs-code" id="qsCode">
+<pre><span class="qc-c"># 1. clone</span>
+git clone https://github.com/anubhavmohandas/GHOST.git
+<span class="qc-c"># 2. open chrome://extensions, enable Developer mode</span>
+<span class="qc-c"># 3. Load unpacked → select GHOST folder</span>
+<span class="qc-c"># 4. profit. (or pull updates)</span>
+./update.sh</pre>
+      </div>
+      <div class="qs-meta">
+        <span><span class="kbd">⌘</span><span class="kbd">⇧</span><span class="kbd">F</span> on Mac · <span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">F</span> on Windows / Linux</span>
+        <span class="qs-version">v5.4.0 · 14.2 kB zipped</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ FOOTER ════ -->
+<footer class="footer" data-screen-label="09 Footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="word">stay haunted.</div>
+      <div class="footer-meta">
+        <div>v5.4.0 / Released 2026-05-08</div>
+        <div>MIT licensed</div>
+        <div><a href="https://github.com/anubhavmohandas/GHOST" target="_blank" rel="noopener">github.com/anubhavmohandas/GHOST →</a></div>
+        <div>Made by Anubhav Mohandas</div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>👻 GHOST · General Handler of Stored Templates</span>
+      <span>NO TELEMETRY · NO ANALYTICS · ZERO EXTERNAL REQUESTS</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ════ TWEAKS PANEL ════ -->
+<div class="tweaks-panel" id="tweaksPanel">
+  <header>
+    <h4>Tweaks</h4>
+    <button class="close-btn" id="tweaksClose">✕</button>
+  </header>
+
+  <div class="tweak-section">
+    <div class="tweak-label">Theme</div>
+    <div class="tweak-options four" id="tweakThemes"></div>
+  </div>
+
+  <div class="tweak-section">
+    <div class="tweak-label">Motion</div>
+    <div class="tweak-options" id="tweakMotion">
+      <button class="tweak-btn" data-motion="low">Subtle</button>
+      <button class="tweak-btn active" data-motion="high">Full</button>
+    </div>
+  </div>
+
+  <div class="tweak-section">
+    <div class="tweak-label">Display Font</div>
+    <div class="tweak-options" id="tweakFont">
+      <button class="tweak-btn active" data-font="instrument">Instrument</button>
+      <button class="tweak-btn" data-font="grotesk">All Grotesk</button>
+    </div>
+  </div>
+
+  <div class="tweak-section">
+    <div class="tweak-label">Demo</div>
+    <div class="tweak-options" id="tweakDemo">
+      <button class="tweak-btn" id="tweakReplay">↺ Replay form fill</button>
+      <button class="tweak-btn" id="tweakResetPopup">↺ Reset popup</button>
+    </div>
+  </div>
+</div>
+
+<script src="frontend/ghost-site.js"></script>
+</body>
+</html>
