@@ -457,3 +457,26 @@ navScroll();
 
 // Announce tweaks availability AFTER listener is wired
 try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch {}
+
+// ── Ghost custom cursor (replaces system pointer site-wide) ─────────────────
+(function () {
+  const el = document.createElement('div');
+  el.id = 'ghost-pointer';
+  el.textContent = '👻';
+  document.body.appendChild(el);
+
+  let cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+
+  document.addEventListener('mousemove', e => {
+    cx = e.clientX; cy = e.clientY;
+    el.style.left = cx + 'px';
+    el.style.top  = cy + 'px';
+  }, { passive: true });
+
+  document.addEventListener('mousedown', () => el.classList.add('clicking'));
+  document.addEventListener('mouseup',   () => el.classList.remove('clicking'));
+
+  // Hide when pointer leaves window, restore on enter
+  document.addEventListener('mouseleave', () => { el.style.opacity = '0'; });
+  document.addEventListener('mouseenter', () => { el.style.opacity = '1'; });
+})();

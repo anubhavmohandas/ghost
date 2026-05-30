@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GHOST",
-  "version": "5.5.7",
+  "version": "5.5.8",
   "description": "General Handler of Stored Templates \u2014 silently fills any form with your saved profiles. Personal, credentials, custom fields & security payloads.",
   "icons": {
     "16": "icons/icon16.png",

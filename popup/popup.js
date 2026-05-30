@@ -1849,3 +1849,17 @@ document.querySelector('.tab[data-tab="irctc"]')?.addEventListener('click', () =
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 init().catch(console.error);
+
+// ── Ghost custom cursor ───────────────────────────────────────────────────────
+(function() {
+  const ptr = document.getElementById('ghost-ptr');
+  if (!ptr) return;
+  document.addEventListener('mousemove', e => {
+    ptr.style.left = e.clientX + 'px';
+    ptr.style.top  = e.clientY + 'px';
+  }, { passive: true });
+  document.addEventListener('mousedown', () => ptr.classList.add('click'));
+  document.addEventListener('mouseup',   () => ptr.classList.remove('click'));
+  document.addEventListener('mouseleave', () => { ptr.style.opacity = '0'; });
+  document.addEventListener('mouseenter', () => { ptr.style.opacity = '1'; });
+})();
