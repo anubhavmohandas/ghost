@@ -3,7 +3,7 @@
 
 > A browser extension that silently fills any form with your saved profiles — personal info, credentials, custom fields, and security payloads.
 
-![Version](https://img.shields.io/badge/version-5.4.0-7c3aed?style=flat-square)
+![Version](https://img.shields.io/badge/version-5.5.8-7c3aed?style=flat-square)
 ![Manifest](https://img.shields.io/badge/manifest-v3-22d3ee?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)
 ![Browsers](https://img.shields.io/badge/browsers-Chrome%20%7C%20Firefox%20%7C%20Edge%20%7C%20Brave-d4d0ff?style=flat-square)
@@ -14,7 +14,7 @@
 
 Most autofill tools only cover name + email. GHOST covers **79 field types** across every kind of form you'll encounter — job applications, KYC, government portals, bug bounty signups, CTF registrations, checkout pages, banking forms.
 
-Fill a form in one click. Or use **Smart Fill** to only fill empty fields. Or inject a payload directly into a focused field for testing.
+Fill a form in one click. Or use **Smart Fill** to only fill empty fields. Or inject a payload directly into a focused field for testing. Or let GHOST handle your IRCTC train booking in one shot.
 
 ---
 
@@ -22,7 +22,7 @@ Fill a form in one click. Or use **Smart Fill** to only fill empty fields. Or in
 
 ### Chrome / Edge / Brave (Manifest V3)
 
-1. Download and extract `ghost-v5.4.zip`
+1. Download and extract `ghost-v5.5.8.zip`
 2. Go to `chrome://extensions`
 3. Enable **Developer mode** (top right)
 4. Click **Load unpacked**
@@ -59,6 +59,7 @@ Run `update.sh` (macOS/Linux) or `update.bat` (Windows) from the repo root to pu
 | Fill everything | Click **Haunt All** |
 | Fill only empty fields | Click **Smart Fill** |
 | Preview what's detectable | Click **👁 Preview** |
+| Fill IRCTC train booking | Open the IRCTC passenger tab → click **Fill IRCTC** |
 | Inject a payload into focused field | Go to Payloads tab → **⚡** |
 | Keyboard shortcut | `Cmd+Shift+F` (Mac) / `Ctrl+Shift+F` (Windows/Linux) |
 | Export profiles (encrypted) | Footer → **📤 Export** → enter passphrase in modal |
@@ -66,6 +67,8 @@ Run `update.sh` (macOS/Linux) or `update.bat` (Windows) from the repo root to pu
 | Bind a profile to a site | Settings → **Site Bindings** → add current URL |
 | Toggle hover pill | Settings → enable/disable **Show hover pill** |
 | Set PIN lock | Settings → **Set PIN** → encrypts sensitive fields at rest |
+| Auto-lock on close | Settings → enable **Auto-lock** — clears session key when popup closes |
+| Change theme | Settings → **Theme** — 7 presets + custom builder |
 
 ---
 
@@ -73,7 +76,7 @@ Run `update.sh` (macOS/Linux) or `update.bat` (Windows) from the repo root to pu
 
 ### PIN Lock & At-Rest Encryption
 
-v5.4 adds optional PIN-based encryption of sensitive profile fields stored in `chrome.storage.local`.
+Optional PIN-based encryption of sensitive profile fields stored in `chrome.storage.local`.
 
 When a PIN is set:
 - **Two PBKDF2 derivations** are performed from the PIN — one for a verification hash (stored), one for the AES-GCM encryption key (never stored, held in memory only for the popup session).
@@ -81,6 +84,10 @@ When a PIN is set:
 - **Sensitive fields encrypted**: entire `credentials` section + `cardNumber`, `cvv`, `cardExpiry`, `cardHolder`, `bankAccount`, `bankName`, `ifsc`, `gstin` from the professional section.
 - Session key is cleared when the popup closes. Without the PIN, stored ciphertext is unreadable.
 - If no PIN is set, behaviour is unchanged — no overhead, no prompts.
+
+### Auto-Lock
+
+When **Auto-lock** is enabled in Settings, the session key is wiped from memory whenever the popup closes. Every reopen requires re-entering the PIN. Recommended on shared machines.
 
 ### Passphrase Modal
 
@@ -130,6 +137,23 @@ Map any CSS selector, `name`, or `id` to any value. Handles site-specific fields
 ### 💀 Payloads (inside Login tab)
 Named text payloads injected directly into the focused field. Useful for security testing, CTF forms, or repetitive test data entry.
 
+### 🚆 IRCTC Train Booking Tab
+Dedicated fill for the IRCTC passenger booking page (Angular + PrimeNG SPA). Handles:
+
+| Field | Strategy |
+|---|---|
+| Passenger name | PrimeNG `p-autocomplete` dropdown selection (forces `forceSelection=true` compliance) |
+| Age | Native input with Angular `input`/`change` event dispatch |
+| Gender | Native `<select>` via `HTMLSelectElement.prototype` setter + `change` event |
+| Berth preference | Same as gender |
+| Food preference | Same as gender |
+| ID type | Same as gender |
+| ID number | Native input fill |
+| Mobile number | Filled in the contact section |
+| Travel insurance | Auto-clicks "No" radio with 3-attempt retry (700ms / 1800ms / 3500ms) using Angular Material `mat-radio-button` click chain |
+
+Multi-passenger support: each passenger row is isolated via `app-passenger` component container. Fills stagger at 1200ms per passenger to prevent Angular focus conflicts.
+
 ---
 
 ## How field detection works
@@ -151,6 +175,22 @@ The hover pill only appears on fields whose bounding rect is fully within the vi
 
 ---
 
+## Theme System
+
+7 built-in presets + a fully custom builder:
+
+| Theme | Palette |
+|---|---|
+| Purple Amber | Deep violet background, amber accent (default) |
+| Teal × Coral | Dark teal base, coral highlights |
+| Synthwave Dream | Neon pink + cyan on dark navy |
+| Synth Dusk | Muted purple + gold on near-black |
+| Midnight Blue | Charcoal + electric blue |
+| Forest Dark | Deep green + warm amber |
+| Custom | 10 live color pickers — bg, surface, accent, gradient stops, text |
+
+---
+
 ## Project Structure
 
 ```
@@ -161,11 +201,11 @@ ghost-extension/
 │   ├── background.js          # Service worker — shortcut handler + sender verification
 │   └── background-ff.js       # Firefox background script
 ├── content/
-│   └── content.js             # Field detection + fill logic + hover pill
+│   └── content.js             # Field detection + fill logic + hover pill + IRCTC fill
 ├── popup/
-│   ├── popup.html             # Extension popup UI (includes PIN overlay + passphrase modal)
-│   ├── popup.css              # Theme system — 4 presets + custom builder
-│   └── popup.js               # Profile management, PIN lock, encryption, export/import
+│   ├── popup.html             # Extension popup UI (PIN overlay + passphrase modal + ghost cursor)
+│   ├── popup.css              # Theme system — 7 presets + custom builder + ghost cursor styles
+│   └── popup.js               # Profile management, PIN lock, auto-lock, encryption, export/import
 ├── icons/
 │   ├── icon16.png
 │   ├── icon48.png
@@ -206,8 +246,8 @@ yourFieldKey: {
 Tag a commit and push — GitHub Actions builds Chrome zip, Firefox zip, and macOS tar.gz automatically:
 
 ```bash
-git tag v5.4.0
-git push origin v5.4.0
+git tag v5.5.8
+git push origin v5.5.8
 ```
 
 The release workflow (`release.yml`) attaches all three artifacts to the GitHub Release.
@@ -224,6 +264,8 @@ PRs welcome. If you find a site where GHOST doesn't detect a field correctly, op
 
 | Version | Date | What changed |
 |---------|------|--------------|
+| **5.5.8** | 2026-05-12 | IRCTC passenger fill: multi-passenger support with 1200ms stagger; PrimeNG `p-autocomplete` dropdown-click strategy (handles `forceSelection=true`); native `<select>` fill via `HTMLSelectElement.prototype` setter for Gender/Berth/Food/ID-type; `app-passenger` row isolation for reliable per-passenger field targeting; name truncated to 16 chars (IRCTC max). Ghost 👻 emoji custom cursor in extension popup (`cursor: none` + fixed-positioned div, click animation). `sendFill()` injection fallback fixes "Cannot fill this page" toast on first run. IRCTC tab fire-and-forget message pattern fixes false "Could not reach tab" error. Travel insurance auto-clicks "No" with 3-attempt retry (700ms / 1800ms / 3500ms) via Angular Material click chain. |
+| **5.5.0** | 2026-05-10 | Auto-lock setting: clears session key on popup close. 3 additional theme presets (Midnight Blue, Forest Dark, Synth Dusk). Dedicated IRCTC train booking tab in popup with separate profile slot. |
 | **5.4** | 2026-05-08 | Security audit + hardening: PIN lock with AES-GCM at-rest encryption (600k PBKDF2 iterations, 32-byte salt, two-key architecture); passphrase modal replaces `window.prompt()`; background sender verification (`sender.id` check); chunked `b64()` to prevent V8 stack overflow on large buffers; `escHtml()` encodes single quotes; import schema validation; pill toggle setting; `drivingLicence` autocomplete bug fixed; keyboard shortcut `.toLowerCase()` fix; left-side stray pill fix (`rect.right < 300` threshold + `rect.left < 0` / `rect.top < 0` guards); dictation `getUserMedia` permission flow; update.sh + update.bat; GitHub Actions release workflow. |
 | **5.2** | 2026-05-08 | Per-site profile binding UI. Firefox MV2 manifest. Chrome Web Store assets. Rounded popup corners. |
 | **5.1** | 2026-05-08 | Smart hover pill states — gradient sweep + sarcastic message when field has data; sad ghost when field is empty. 5-second profile cache for instant hover response. |
